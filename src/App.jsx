@@ -3,7 +3,7 @@ import {
   ShoppingCart, Package, LayoutDashboard, ClipboardList, Boxes, Store,
   Plus, Pencil, Trash2, X, Search, AlertTriangle, Clock, Truck, CheckCircle2,
   Lock, ArrowLeft, Minus, DollarSign, Upload, ImageIcon, Tag, Sparkles, LogOut, Loader2,
-  MapPin, Phone, Mail, MessageCircle, Wrench, ListTree,
+  MapPin, Phone, Mail, MessageCircle, Wrench, ListTree, Star, SlidersHorizontal, ShieldCheck,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
 import * as db from "./lib/db";
@@ -13,7 +13,7 @@ import { SHOP, waLink, mailLink } from "./lib/config";
 const T = {
   bg: "#0B0E14", panel: "#131823", panel2: "#0F1420", border: "#232B3A",
   text: "#E6E9EF", muted: "#8A93A6", faint: "#5A6378",
-  accent: "#4D8DFF", accentDim: "#1c3a6e", green: "#34D399", red: "#F87171", amber: "#FBBF24",
+  accent: "#0A8DE6", accentDim: "#0B3A57", green: "#34D399", red: "#F87171", amber: "#FBBF24",
 };
 const LOW_STOCK = 5;
 const GRADES = ["Like New", "Excellent", "Good", "Fair"];
@@ -86,6 +86,7 @@ export default function ZAAppliances() {
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [view, setView] = useState("store");
   const [loading, setLoading] = useState(true);
   const [pushToast, toastNode] = useToasts();
@@ -97,8 +98,11 @@ export default function ZAAppliances() {
   const reloadCategories = useCallback(async () => {
     try { setCategories(await db.listCategories()); } catch (e) { console.error(e); }
   }, []);
+  const reloadReviews = useCallback(async () => {
+    try { setReviews(await db.listReviews()); } catch (e) { console.error(e); }
+  }, []);
 
-  useEffect(() => { (async () => { await Promise.all([reloadProducts(), reloadCategories()]); setLoading(false); })(); }, [reloadProducts, reloadCategories]);
+  useEffect(() => { (async () => { await Promise.all([reloadProducts(), reloadCategories(), reloadReviews()]); setLoading(false); })(); }, [reloadProducts, reloadCategories, reloadReviews]);
 
   const placeOrder = useCallback(async (cart, customer) => {
     const res = await db.placeOrder(customer, cart);
@@ -116,13 +120,64 @@ export default function ZAAppliances() {
           <div style={{ textAlign: "center" }}><Spin size={28} /><div style={{ marginTop: 10 }}>Connecting to your store…</div></div>
         </div>
       ) : view === "store" ? (
-        <Storefront products={products} categories={categories} placeOrder={placeOrder} pushToast={pushToast} />
+        <Storefront products={products} categories={categories} reviews={reviews} reloadReviews={reloadReviews} placeOrder={placeOrder} pushToast={pushToast} />
       ) : view === "contact" ? (
         <ContactPage />
       ) : (
         <Admin products={products} reloadProducts={reloadProducts} categories={categories} reloadCategories={reloadCategories}
           orders={orders} setOrders={setOrders} setProducts={setProducts} pushToast={pushToast} />
       )}
+    </div>
+  );
+}
+
+/* rating helpers + small star components */
+const onSale = (p) => p.salePrice != null && p.salePrice > 0 && p.salePrice < p.price;
+const effPrice = (p) => (onSale(p) ? p.salePrice : p.price);
+const savePct = (p) => Math.round((1 - p.salePrice / p.price) * 100);
+function Price({ p, size = 18 }) {
+  if (!onSale(p)) return <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: size }}>{money(p.price)}</span>;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+      <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: size, color: T.red }}>{money(p.salePrice)}</span>
+      <span style={{ fontFamily: "JetBrains Mono", fontSize: size * 0.72, color: T.faint, textDecoration: "line-through" }}>{money(p.price)}</span>
+    </span>
+  );
+}
+const reviewStats = (reviews, productId) => {
+  const rs = reviews.filter((r) => r.product_id === productId);
+  if (!rs.length) return { avg: 0, count: 0 };
+  return { avg: rs.reduce((s, r) => s + r.rating, 0) / rs.length, count: rs.length };
+};
+function Stars({ value = 0, size = 14 }) {
+  return (
+    <span style={{ display: "inline-flex", gap: 1 }}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star key={n} size={size} style={{ color: n <= Math.round(value) ? T.amber : T.faint }} fill={n <= Math.round(value) ? T.amber : "none"} />
+      ))}
+    </span>
+  );
+}
+function StarInput({ value, onChange, size = 22 }) {
+  return (
+    <span style={{ display: "inline-flex", gap: 3 }}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button key={n} type="button" onClick={() => onChange(n)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 0 }}>
+          <Star size={size} style={{ color: n <= value ? T.amber : T.faint }} fill={n <= value ? T.amber : "none"} />
+        </button>
+      ))}
+    </span>
+  );
+}
+function DeliveryStrip({ mobile }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: 10, marginBottom: 20 }}>
+      {SHOP.deliveryPerks.map(([title, detail], i) => (
+        <div key={i} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", display: "flex", gap: 10, alignItems: "flex-start" }}>
+          <Truck size={18} style={{ color: T.accent, flexShrink: 0, marginTop: 2 }} />
+          <div><div style={{ fontWeight: 700, fontSize: 13.5 }}>{title}</div><div style={{ color: T.muted, fontSize: 12, lineHeight: 1.4 }}>{detail}</div></div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -156,28 +211,44 @@ function StockBadge({ stock }) {
 }
 
 /* =============================== STOREFRONT =============================== */
-function Storefront({ products, categories, placeOrder, pushToast }) {
+function Storefront({ products, categories, reviews, reloadReviews, placeOrder, pushToast }) {
   const mobile = useIsMobile();
   const [cart, setCart] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("All");
   const [cond, setCond] = useState("all");
+  const [minP, setMinP] = useState("");
+  const [maxP, setMaxP] = useState("");
+  const [inStock, setInStock] = useState(false);
+  const [saleOnly, setSaleOnly] = useState(false);
+  const [sort, setSort] = useState("featured");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [detail, setDetail] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
 
   const catNames = categories.length ? categories.map((c) => c.name) : FALLBACK_CATEGORIES;
-  const cats = useMemo(() => ["All", ...catNames], [categories]);
-  const filtered = products.filter((p) =>
-    (cat === "All" || p.category === cat) && (cond === "all" || p.condition === cond) &&
-    (p.name.toLowerCase().includes(q.toLowerCase()) || (p.category || "").toLowerCase().includes(q.toLowerCase())));
+  const filtered = useMemo(() => {
+    let list = products.filter((p) =>
+      (cat === "All" || p.category === cat) && (cond === "all" || p.condition === cond) &&
+      (!inStock || p.stock > 0) && (!saleOnly || onSale(p)) &&
+      (minP === "" || effPrice(p) >= Number(minP)) && (maxP === "" || effPrice(p) <= Number(maxP)) &&
+      (p.name.toLowerCase().includes(q.toLowerCase()) || (p.category || "").toLowerCase().includes(q.toLowerCase())));
+    const rate = (p) => reviewStats(reviews, p.id).avg;
+    if (sort === "price-asc") list = [...list].sort((a, b) => effPrice(a) - effPrice(b));
+    else if (sort === "price-desc") list = [...list].sort((a, b) => effPrice(b) - effPrice(a));
+    else if (sort === "rating") list = [...list].sort((a, b) => rate(b) - rate(a));
+    return list;
+  }, [products, reviews, cat, cond, inStock, saleOnly, minP, maxP, q, sort]);
+  const activeFilters = (cat !== "All" ? 1 : 0) + (cond !== "all" ? 1 : 0) + (inStock ? 1 : 0) + (saleOnly ? 1 : 0) + (minP !== "" || maxP !== "" ? 1 : 0);
+  const clearFilters = () => { setCat("All"); setCond("all"); setInStock(false); setSaleOnly(false); setMinP(""); setMaxP(""); };
   const cartCount = cart.reduce((s, c) => s + c.qty, 0);
   const cartTotal = cart.reduce((s, c) => s + c.price * c.qty, 0);
 
   const addToCart = (p, qty = 1) => {
     const ex = cart.find((c) => c.id === p.id);
     if ((ex ? ex.qty : 0) + qty > p.stock) { pushToast("Not enough stock available", "warn"); return; }
-    setCart((c) => ex ? c.map((x) => x.id === p.id ? { ...x, qty: x.qty + qty } : x) : [...c, { id: p.id, name: p.name, price: p.price, qty, img: mainImage(p) }]);
+    setCart((c) => ex ? c.map((x) => x.id === p.id ? { ...x, qty: x.qty + qty } : x) : [...c, { id: p.id, name: p.name, price: effPrice(p), qty, img: mainImage(p) }]);
     pushToast(`Added ${p.name}`);
   };
   const setQty = (id, qty) => {
@@ -185,6 +256,48 @@ function Storefront({ products, categories, placeOrder, pushToast }) {
     if (prod && qty > prod.stock) { pushToast("Exceeds available stock", "warn"); return; }
     setCart((c) => qty <= 0 ? c.filter((x) => x.id !== id) : c.map((x) => x.id === id ? { ...x, qty } : x));
   };
+  const submitReview = async (productId, r) => {
+    try { await db.addReview({ product_id: productId, ...r }); await reloadReviews(); pushToast("Thanks for your review!"); return true; }
+    catch (e) { pushToast(e.message || "Could not submit review", "err"); return false; }
+  };
+
+  const FilterControls = () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <div>
+        <div style={filterHead}>Category</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {["All", ...catNames].map((c) => (
+            <button key={c} onClick={() => setCat(c)} style={{ textAlign: "left", border: "none", background: cat === c ? T.accentDim : "transparent", color: cat === c ? T.text : T.muted, padding: "8px 10px", borderRadius: 8, fontSize: 13.5, cursor: "pointer", fontWeight: cat === c ? 700 : 500, fontFamily: "Manrope" }}>{c}</button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <div style={filterHead}>Condition</div>
+        <div style={{ display: "flex", background: T.panel2, borderRadius: 9, padding: 3, border: `1px solid ${T.border}` }}>
+          {[["all", "All"], ["new", "New"], ["used", "Used"]].map(([k, l]) => (
+            <button key={k} onClick={() => setCond(k)} style={{ flex: 1, border: "none", cursor: "pointer", background: cond === k ? T.accent : "transparent", color: cond === k ? "#fff" : T.muted, padding: "7px 0", borderRadius: 7, fontSize: 13, fontWeight: 600, fontFamily: "Manrope" }}>{l}</button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <div style={filterHead}>Price (£)</div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input type="number" value={minP} onChange={(e) => setMinP(e.target.value)} placeholder="Min" style={{ ...inp, marginTop: 0 }} />
+          <span style={{ color: T.faint }}>–</span>
+          <input type="number" value={maxP} onChange={(e) => setMaxP(e.target.value)} placeholder="Max" style={{ ...inp, marginTop: 0 }} />
+        </div>
+      </div>
+      <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 14 }}>
+        <input type="checkbox" checked={inStock} onChange={(e) => setInStock(e.target.checked)} style={{ width: 16, height: 16, accentColor: T.accent }} />
+        In stock only
+      </label>
+      <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 14, marginTop: -8 }}>
+        <input type="checkbox" checked={saleOnly} onChange={(e) => setSaleOnly(e.target.checked)} style={{ width: 16, height: 16, accentColor: T.red }} />
+        On sale only
+      </label>
+      {activeFilters > 0 && <button onClick={clearFilters} style={{ ...ghostBtn, padding: "9px 0" }}>Clear filters</button>}
+    </div>
+  );
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: mobile ? 14 : 24, paddingBottom: mobile ? 90 : 24 }}>
@@ -195,25 +308,31 @@ function Storefront({ products, categories, placeOrder, pushToast }) {
         <div style={{ position: "absolute", right: -10, top: -16, fontSize: 120, opacity: .12 }}>🧊</div>
       </div>
 
-      <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{ position: "relative", flex: "1 1 200px" }}>
+      <DeliveryStrip mobile={mobile} />
+
+      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ position: "relative", flex: "1 1 220px" }}>
           <Search size={16} style={{ position: "absolute", left: 12, top: 11, color: T.faint }} />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search products…" style={{ width: "100%", background: T.panel, border: `1px solid ${T.border}`, borderRadius: 10, padding: "9px 12px 9px 36px", color: T.text, fontSize: 14, fontFamily: "Manrope", outline: "none" }} />
         </div>
-        <div style={{ display: "flex", background: T.panel, borderRadius: 10, padding: 3, border: `1px solid ${T.border}` }}>
-          {[["all", "All"], ["new", "New"], ["used", "Used"]].map(([k, l]) => (
-            <button key={k} onClick={() => setCond(k)} style={{ border: "none", cursor: "pointer", background: cond === k ? T.accent : "transparent", color: cond === k ? "#fff" : T.muted, padding: "7px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600, fontFamily: "Manrope" }}>{l}</button>
-          ))}
-        </div>
+        {mobile && (
+          <button onClick={() => setFiltersOpen(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: T.panel, border: `1px solid ${T.border}`, color: T.text, padding: "9px 14px", borderRadius: 10, fontSize: 13.5, fontWeight: 600, fontFamily: "Manrope", cursor: "pointer" }}>
+            <SlidersHorizontal size={15} /> Filters{activeFilters > 0 && <span style={{ background: T.accent, color: "#fff", borderRadius: 20, padding: "0 7px", fontSize: 11, fontFamily: "JetBrains Mono" }}>{activeFilters}</span>}
+          </button>
+        )}
+        <select value={sort} onChange={(e) => setSort(e.target.value)} style={{ background: T.panel, border: `1px solid ${T.border}`, color: T.text, padding: "9px 12px", borderRadius: 10, fontSize: 13.5, fontFamily: "Manrope", outline: "none", cursor: "pointer" }}>
+          <option value="featured" style={{ background: T.panel }}>Sort: Featured</option>
+          <option value="price-asc" style={{ background: T.panel }}>Price: Low to High</option>
+          <option value="price-desc" style={{ background: T.panel }}>Price: High to Low</option>
+          <option value="rating" style={{ background: T.panel }}>Top rated</option>
+        </select>
       </div>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 18, flexWrap: "wrap" }}>
-        {cats.map((c) => (
-          <button key={c} onClick={() => setCat(c)} style={{ border: `1px solid ${cat === c ? T.accent : T.border}`, background: cat === c ? T.accentDim : "transparent", color: cat === c ? T.text : T.muted, padding: "7px 13px", borderRadius: 9, fontSize: 12.5, cursor: "pointer", fontWeight: 500, fontFamily: "Manrope" }}>{c}</button>
-        ))}
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(230px, 1fr))", gap: mobile ? 10 : 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "230px 1fr", gap: 20, alignItems: "start" }}>
+        {!mobile && <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, padding: 16, position: "sticky", top: 74 }}><FilterControls /></div>}
+        <div>
+          <div style={{ color: T.faint, fontSize: 13, marginBottom: 10 }}>{filtered.length} product{filtered.length !== 1 ? "s" : ""}{cat !== "All" ? ` in ${cat}` : ""}</div>
+          <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(220px, 1fr))", gap: mobile ? 10 : 16 }}>
         {filtered.map((p) => {
           const out = p.stock === 0;
           return (
@@ -221,13 +340,20 @@ function Storefront({ products, categories, placeOrder, pushToast }) {
               <div style={{ position: "relative", aspectRatio: "4/3", background: T.panel2, overflow: "hidden" }}>
                 <img src={mainImage(p)} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", opacity: out ? .45 : 1 }} />
                 <div style={{ position: "absolute", top: 10, left: 10 }}><ConditionBadge condition={p.condition} grade={p.grade} /></div>
+                {onSale(p) && <div style={{ position: "absolute", top: 10, right: 10, background: T.red, color: "#fff", fontSize: 11.5, fontWeight: 700, padding: "3px 8px", borderRadius: 20, fontFamily: "Manrope" }}>-{savePct(p)}%</div>}
                 {p.images && p.images.length > 1 && <div style={{ position: "absolute", bottom: 10, right: 10, background: "rgba(0,0,0,.6)", color: "#fff", fontSize: 11, padding: "2px 7px", borderRadius: 20, display: "flex", alignItems: "center", gap: 4 }}><ImageIcon size={11} />{p.images.length}</div>}
               </div>
               <div style={{ padding: 14, display: "flex", flexDirection: "column", flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 15, fontFamily: "Sora", lineHeight: 1.25 }}>{p.name}</div>
-                <div style={{ color: T.faint, fontSize: 12, margin: "3px 0 10px" }}>{p.category}</div>
-                <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 18 }}>{money(p.price)}</div>
+                <div style={{ color: T.faint, fontSize: 12, margin: "3px 0 6px" }}>{p.category}</div>
+                {(() => { const rs = reviewStats(reviews, p.id); return (
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 8, minHeight: 16 }}>
+                    {rs.count > 0 ? <><Stars value={rs.avg} size={12} /><span style={{ color: T.muted, fontSize: 11.5, fontFamily: "JetBrains Mono" }}>{rs.avg.toFixed(1)} ({rs.count})</span></>
+                      : <span style={{ color: T.faint, fontSize: 11.5 }}>No reviews yet</span>}
+                  </div>
+                ); })()}
+                <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                  <Price p={p} size={17} />
                   <StockBadge stock={p.stock} />
                 </div>
                 <button disabled={out} onClick={(e) => { e.stopPropagation(); addToCart(p); }} style={{ marginTop: 12, width: "100%", borderRadius: 9, padding: "9px 0", cursor: out ? "not-allowed" : "pointer", background: out ? T.panel2 : T.accent, color: out ? T.faint : "#fff", fontWeight: 600, fontSize: 13.5, fontFamily: "Manrope", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, border: out ? `1px solid ${T.border}` : "none" }}>{out ? "Sold out" : <><Plus size={15} /> Add to cart</>}</button>
@@ -235,8 +361,24 @@ function Storefront({ products, categories, placeOrder, pushToast }) {
             </div>
           );
         })}
-        {filtered.length === 0 && <div style={{ color: T.faint, padding: 40 }}>No products yet. Add some in the Admin area.</div>}
+        {filtered.length === 0 && <div style={{ color: T.faint, padding: 40, gridColumn: "1 / -1" }}>No products match your filters.</div>}
+          </div>
+        </div>
       </div>
+
+      {mobile && filtersOpen && (
+        <>
+          <div onClick={() => setFiltersOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.55)", zIndex: 99, animation: "vm-fade .2s" }} />
+          <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, maxHeight: "82vh", overflowY: "auto", background: T.panel2, borderTop: `1px solid ${T.border}`, borderRadius: "16px 16px 0 0", zIndex: 100, padding: 20, animation: "vm-pop .25s ease" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <span style={{ fontFamily: "Sora", fontWeight: 700, fontSize: 17 }}>Filters</span>
+              <button onClick={() => setFiltersOpen(false)} style={iconBtn}><X size={18} /></button>
+            </div>
+            <FilterControls />
+            <button onClick={() => setFiltersOpen(false)} style={{ ...primaryBtn, marginTop: 18 }}>Show {filtered.length} results</button>
+          </div>
+        </>
+      )}
 
       <div style={{ marginTop: 40, borderTop: `1px solid ${T.border}`, paddingTop: 24, display: "flex", flexWrap: "wrap", gap: 20, justifyContent: "space-between", color: T.muted, fontSize: 14 }}>
         <div>
@@ -254,11 +396,11 @@ function Storefront({ products, categories, placeOrder, pushToast }) {
       <a href={waLink(`Hi ${SHOP.name}, I have a question.`)} target="_blank" rel="noreferrer" title="Chat on WhatsApp" style={{ position: "fixed", left: 24, bottom: 24, zIndex: 50, background: "#25D366", color: "#06210f", borderRadius: 14, padding: "14px 16px", textDecoration: "none", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 10px 30px rgba(37,211,102,.4)", fontWeight: 700, fontFamily: "Manrope" }}>
         <MessageCircle size={18} /> WhatsApp
       </a>
-      <button onClick={() => setCartOpen(true)} style={{ position: "fixed", right: 24, bottom: 24, zIndex: 50, background: T.accent, border: "none", color: "#fff", borderRadius: 14, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 10px 30px rgba(77,141,255,.4)", fontWeight: 700, fontFamily: "Manrope" }}>
+      <button onClick={() => setCartOpen(true)} style={{ position: "fixed", right: 24, bottom: 24, zIndex: 50, background: T.accent, border: "none", color: "#fff", borderRadius: 14, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 10px 30px rgba(10,141,230,.45)", fontWeight: 700, fontFamily: "Manrope" }}>
         <ShoppingCart size={18} /> Cart{cartCount > 0 && <span style={{ background: "#fff", color: T.accent, borderRadius: 20, padding: "1px 8px", fontSize: 12, fontFamily: "JetBrains Mono", fontWeight: 700 }}>{cartCount}</span>}
       </button>
 
-      {detail && <ProductDetail p={detail} onClose={() => setDetail(null)} onAdd={(qty) => { addToCart(detail, qty); setDetail(null); }} />}
+      {detail && <ProductDetail p={detail} reviews={reviews} onSubmitReview={(r) => submitReview(detail.id, r)} onClose={() => setDetail(null)} onAdd={(qty) => { addToCart(detail, qty); setDetail(null); }} />}
       {cartOpen && <CartDrawer cart={cart} cartTotal={cartTotal} setQty={setQty} onClose={() => setCartOpen(false)} onCheckout={async (customer) => { try { const ord = await placeOrder(cart, customer); setCart([]); setCartOpen(false); setConfirmation(ord); } catch (e) { pushToast(e.message || "Order failed", "err"); } }} />}
       {confirmation && (
         <Modal onClose={() => setConfirmation(null)} width={420}>
@@ -275,14 +417,30 @@ function Storefront({ products, categories, placeOrder, pushToast }) {
   );
 }
 
-function ProductDetail({ p, onClose, onAdd }) {
+function ProductDetail({ p, reviews, onSubmitReview, onClose, onAdd }) {
   const mobile = useIsMobile();
   const imgs = (p.images && p.images.length ? p.images : [illustration(p.kind)]);
   const [active, setActive] = useState(0);
   const [qty, setQty] = useState(1);
+  const [tab, setTab] = useState("details");
+  const [rName, setRName] = useState("");
+  const [rRating, setRRating] = useState(5);
+  const [rComment, setRComment] = useState("");
+  const [rBusy, setRBusy] = useState(false);
   const out = p.stock === 0;
+  const prodReviews = reviews.filter((r) => r.product_id === p.id);
+  const stats = reviewStats(reviews, p.id);
+
+  const submit = async () => {
+    if (!rName.trim()) return;
+    setRBusy(true);
+    const ok = await onSubmitReview({ name: rName.trim(), rating: rRating, comment: rComment.trim() });
+    setRBusy(false);
+    if (ok) { setRName(""); setRComment(""); setRRating(5); }
+  };
+
   return (
-    <Modal onClose={onClose} width={760}>
+    <Modal onClose={onClose} width={800}>
       <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: mobile ? 16 : 22 }}>
         <div>
           <div style={{ aspectRatio: "4/3", background: T.panel2, borderRadius: 12, overflow: "hidden", border: `1px solid ${T.border}` }}>
@@ -293,26 +451,77 @@ function ProductDetail({ p, onClose, onAdd }) {
               {imgs.map((src, i) => <img key={i} src={src} onClick={() => setActive(i)} alt="" style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 8, cursor: "pointer", border: `2px solid ${i === active ? T.accent : T.border}` }} />)}
             </div>
           )}
+          {/* delivery / service info */}
+          <div style={{ marginTop: 14, background: T.panel2, border: `1px solid ${T.border}`, borderRadius: 12, padding: 14 }}>
+            {SHOP.deliveryPerks.map(([title, detail], i) => (
+              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "6px 0" }}>
+                <ShieldCheck size={16} style={{ color: T.green, flexShrink: 0, marginTop: 2 }} />
+                <div><span style={{ fontWeight: 600, fontSize: 13.5 }}>{title}</span><span style={{ color: T.muted, fontSize: 12.5 }}> — {detail}</span></div>
+              </div>
+            ))}
+          </div>
         </div>
+
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", gap: 8, marginBottom: 10 }}><ConditionBadge condition={p.condition} grade={p.grade} big /><StockBadge stock={p.stock} /></div>
           <div style={{ fontFamily: "Sora", fontWeight: 800, fontSize: 23, lineHeight: 1.2 }}>{p.name}</div>
           <div style={{ color: T.faint, fontSize: 13, marginTop: 4 }}>{p.category} · SKU {p.sku}</div>
-          <div style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 30, margin: "14px 0" }}>{money(p.price)}</div>
-          <div style={{ color: T.muted, fontSize: 14, lineHeight: 1.6 }}>{p.desc}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+            <Stars value={stats.avg} size={15} />
+            <span style={{ color: T.muted, fontSize: 13 }}>{stats.count ? `${stats.avg.toFixed(1)} · ${stats.count} review${stats.count !== 1 ? "s" : ""}` : "No reviews yet"}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "12px 0", flexWrap: "wrap" }}>
+            <Price p={p} size={30} />
+            {onSale(p) && <span style={{ background: T.red, color: "#fff", fontWeight: 700, fontSize: 13, padding: "4px 10px", borderRadius: 8 }}>Save {money(p.price - p.salePrice)} ({savePct(p)}%)</span>}
+          </div>
+
+          {/* tabs: details / reviews */}
+          <div style={{ display: "flex", gap: 4, borderBottom: `1px solid ${T.border}`, marginBottom: 12 }}>
+            {[["details", "Details"], ["reviews", `Reviews (${stats.count})`]].map(([k, l]) => (
+              <button key={k} onClick={() => setTab(k)} style={{ border: "none", background: "none", cursor: "pointer", color: tab === k ? T.text : T.muted, fontWeight: 700, fontFamily: "Manrope", fontSize: 13.5, padding: "6px 10px", borderBottom: `2px solid ${tab === k ? T.accent : "transparent"}` }}>{l}</button>
+            ))}
+          </div>
+
+          {tab === "details" ? (
+            <div style={{ color: T.muted, fontSize: 14, lineHeight: 1.6 }}>{p.desc}</div>
+          ) : (
+            <div>
+              <div style={{ maxHeight: 180, overflowY: "auto", marginBottom: 12 }}>
+                {prodReviews.length === 0 && <div style={{ color: T.faint, fontSize: 13 }}>Be the first to review this item.</div>}
+                {prodReviews.map((r) => (
+                  <div key={r.id} style={{ padding: "10px 0", borderBottom: `1px solid ${T.border}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontWeight: 600, fontSize: 13.5 }}>{r.name}</span>
+                      <Stars value={r.rating} size={12} />
+                    </div>
+                    {r.comment && <div style={{ color: T.muted, fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>{r.comment}</div>}
+                    <div style={{ color: T.faint, fontSize: 11, marginTop: 4 }}>{new Date(r.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ background: T.panel2, border: `1px solid ${T.border}`, borderRadius: 10, padding: 12 }}>
+                <div style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 8 }}>Write a review</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}><span style={{ color: T.muted, fontSize: 13 }}>Rating</span><StarInput value={rRating} onChange={setRRating} /></div>
+                <input value={rName} onChange={(e) => setRName(e.target.value)} placeholder="Your name" style={{ ...inp, marginTop: 0, marginBottom: 8 }} />
+                <textarea value={rComment} onChange={(e) => setRComment(e.target.value)} rows={2} placeholder="Your review (optional)" style={{ ...inp, marginTop: 0, resize: "vertical" }} />
+                <button onClick={submit} disabled={!rName.trim() || rBusy} style={{ ...primaryBtn, marginTop: 10, opacity: rName.trim() && !rBusy ? 1 : .5, cursor: rName.trim() && !rBusy ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>{rBusy ? <><Spin /> Submitting…</> : "Submit review"}</button>
+              </div>
+            </div>
+          )}
+
           <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
-            <a href={waLink(`Hi ${SHOP.name}, I'm interested in: ${p.name} (${money(p.price)}). Is it available?`)} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#25D366", color: "#06210f", fontWeight: 700, padding: "8px 13px", borderRadius: 8, textDecoration: "none", fontSize: 13 }}><MessageCircle size={15} /> Ask on WhatsApp</a>
-            <a href={mailLink(`Enquiry: ${p.name}`, `Hi ${SHOP.name},\n\nI'm interested in "${p.name}" (${money(p.price)}). Is it still available?\n\nThanks,`)} style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px solid ${T.border}`, color: T.text, fontWeight: 600, padding: "8px 13px", borderRadius: 8, textDecoration: "none", fontSize: 13 }}><Mail size={15} /> Email</a>
+            <a href={waLink(`Hi ${SHOP.name}, I'm interested in: ${p.name} (${money(effPrice(p))}). Is it available?`)} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#25D366", color: "#06210f", fontWeight: 700, padding: "8px 13px", borderRadius: 8, textDecoration: "none", fontSize: 13 }}><MessageCircle size={15} /> Ask on WhatsApp</a>
+            <a href={mailLink(`Enquiry: ${p.name}`, `Hi ${SHOP.name},\n\nI'm interested in "${p.name}" (${money(effPrice(p))}). Is it still available?\n\nThanks,`)} style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px solid ${T.border}`, color: T.text, fontWeight: 600, padding: "8px 13px", borderRadius: 8, textDecoration: "none", fontSize: 13 }}><Mail size={15} /> Email</a>
           </div>
           {!out && (
-            <div style={{ marginTop: "auto", paddingTop: 18 }}>
+            <div style={{ marginTop: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                 <span style={{ color: T.muted, fontSize: 13 }}>Qty</span>
                 <button onClick={() => setQty(Math.max(1, qty - 1))} style={qtyBtn}><Minus size={13} /></button>
                 <span style={{ fontFamily: "JetBrains Mono", minWidth: 18, textAlign: "center" }}>{qty}</span>
                 <button onClick={() => setQty(Math.min(p.stock, qty + 1))} style={qtyBtn}><Plus size={13} /></button>
               </div>
-              <button onClick={() => onAdd(qty)} style={primaryBtn}>Add {qty} to cart · {money(p.price * qty)}</button>
+              <button onClick={() => onAdd(qty)} style={primaryBtn}>Add {qty} to cart · {money(effPrice(p) * qty)}</button>
             </div>
           )}
         </div>
@@ -434,7 +643,7 @@ function Dashboard({ products, orders, setTab }) {
   const lowStock = products.filter((p) => p.stock <= LOW_STOCK);
   const usedCount = products.filter((p) => p.condition === "used").length;
   const byCat = useMemo(() => {
-    const m = {}; products.forEach((p) => { const k = (p.category || "Other").split(" ")[0]; m[k] = (m[k] || 0) + p.price * p.stock; });
+    const m = {}; products.forEach((p) => { const k = (p.category || "Other").split(" ")[0]; m[k] = (m[k] || 0) + effPrice(p) * p.stock; });
     return Object.entries(m).map(([category, value]) => ({ category, value: Math.round(value) }));
   }, [products]);
   const kpis = [
@@ -484,7 +693,7 @@ function Dashboard({ products, orders, setTab }) {
 function ProductsAdmin({ products, reloadProducts, categories, pushToast }) {
   const [editing, setEditing] = useState(null);
   const catNames = categories.length ? categories.map((c) => c.name) : FALLBACK_CATEGORIES;
-  const blank = { name: "", category: catNames[0], kind: kindForCategory(categories, catNames[0]), sku: "", price: "", cost: "", stock: "", condition: "new", grade: "Good", images: [], desc: "" };
+  const blank = { name: "", category: catNames[0], kind: kindForCategory(categories, catNames[0]), sku: "", price: "", cost: "", stock: "", salePrice: "", condition: "new", grade: "Good", images: [], desc: "" };
   const save = async (p) => {
     if (!p.name || !p.price) { pushToast("Name and price required", "warn"); return; }
     const payload = { ...p, kind: kindForCategory(categories, p.category) };
@@ -509,11 +718,11 @@ function ProductsAdmin({ products, reloadProducts, categories, pushToast }) {
               <tr key={p.id} style={{ borderBottom: `1px solid ${T.border}` }}>
                 <td style={td}><div style={{ display: "flex", alignItems: "center", gap: 10 }}><img src={mainImage(p)} alt="" style={{ width: 38, height: 38, borderRadius: 8, objectFit: "cover", border: `1px solid ${T.border}` }} /><div>{p.name}<div style={{ color: T.faint, fontSize: 12 }}>{p.category}</div></div></div></td>
                 <td style={td}><ConditionBadge condition={p.condition} grade={p.grade} /></td>
-                <td style={{ ...td, fontFamily: "JetBrains Mono" }}>{money(p.price)}</td>
+                <td style={td}><Price p={p} size={14} /></td>
                 <td style={td}><StockBadge stock={p.stock} /></td>
-                <td style={{ ...td, fontFamily: "JetBrains Mono", color: T.green }}>{p.price ? Math.round((1 - p.cost / p.price) * 100) : 0}%</td>
+                <td style={{ ...td, fontFamily: "JetBrains Mono", color: T.green }}>{effPrice(p) ? Math.round((1 - p.cost / effPrice(p)) * 100) : 0}%</td>
                 <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>
-                  <button onClick={() => setEditing(p)} style={iconBtnSm}><Pencil size={15} /></button>
+                  <button onClick={() => setEditing({ ...p, salePrice: p.salePrice ?? "" })} style={iconBtnSm}><Pencil size={15} /></button>
                   <button onClick={() => del(p.id)} style={{ ...iconBtnSm, color: T.red }}><Trash2 size={15} /></button>
                 </td>
               </tr>
@@ -583,6 +792,14 @@ function ProductForm({ p, onChange, categories, pushToast }) {
         {p.condition === "used" && <div style={{ flex: 1 }}><label style={lbl}>Grade</label><select value={p.grade} onChange={(e) => f("grade", e.target.value)} style={inp}>{GRADES.map((g) => <option key={g} value={g} style={{ background: T.panel }}>{g}</option>)}</select></div>}
       </div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>{field("price", "Price (£)", "number")}{field("cost", "Cost (£)", "number")}{field("stock", "Stock", "number")}</div>
+      <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
+        {field("salePrice", "Sale price (£) — optional", "number", "Leave blank for none")}
+        <div style={{ flex: 1, fontSize: 12.5, color: T.muted, paddingBottom: 9 }}>
+          {p.salePrice && Number(p.salePrice) > 0 && Number(p.salePrice) < Number(p.price)
+            ? <span style={{ color: T.green }}>Shows as -{Math.round((1 - Number(p.salePrice) / Number(p.price)) * 100)}% off</span>
+            : (p.salePrice && Number(p.salePrice) >= Number(p.price) ? <span style={{ color: T.amber }}>Sale price must be below the normal price</span> : "Set a lower price to show a discount badge")}
+        </div>
+      </div>
       <div><label style={lbl}>Description</label><textarea value={p.desc} onChange={(e) => f("desc", e.target.value)} rows={3} style={{ ...inp, resize: "vertical" }} /></div>
     </div>
   );
@@ -768,6 +985,7 @@ const h2 = { fontFamily: "Sora", fontWeight: 700, fontSize: 22, marginBottom: 18
 const card = { background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, padding: 18 };
 const td = { padding: "12px 14px", verticalAlign: "middle" };
 const lbl = { fontSize: 12, color: T.muted };
+const filterHead = { fontSize: 11, fontWeight: 700, color: T.faint, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 };
 const inp = { width: "100%", marginTop: 4, background: T.panel2, border: `1px solid ${T.border}`, borderRadius: 8, padding: "9px 11px", color: T.text, fontSize: 14, fontFamily: "Manrope", outline: "none" };
 const primaryBtn = { width: "100%", background: T.accent, border: "none", color: "#fff", padding: "11px 0", borderRadius: 9, cursor: "pointer", fontWeight: 600, fontSize: 14, fontFamily: "Manrope" };
 const primaryBtnSm = { display: "flex", alignItems: "center", gap: 6, background: T.accent, border: "none", color: "#fff", padding: "8px 14px", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13, fontFamily: "Manrope" };

@@ -11,9 +11,10 @@ import { SHOP, waLink, mailLink } from "./lib/config";
 
 /* ---------------------------------- theme --------------------------------- */
 const T = {
-  bg: "#0B0E14", panel: "#131823", panel2: "#0F1420", border: "#232B3A",
-  text: "#E6E9EF", muted: "#8A93A6", faint: "#5A6378",
-  accent: "#0A8DE6", accentDim: "#0B3A57", green: "#34D399", red: "#F87171", amber: "#FBBF24",
+  bg: "#F5F8FC", panel: "#FFFFFF", panel2: "#EEF3F9", border: "#E2E8F1",
+  text: "#0F1C2E", muted: "#5A6678", faint: "#9AA6B6",
+  accent: "#0A8DE6", accentDim: "#E1F0FB", green: "#1FA971", red: "#E0483D", amber: "#E8A300",
+  shadow: "0 1px 2px rgba(20,48,90,.06), 0 6px 20px rgba(20,48,90,.07)",
 };
 const LOW_STOCK = 5;
 const GRADES = ["Like New", "Excellent", "Good", "Fair"];
@@ -37,17 +38,17 @@ const money = (n) => "£" + (Number(n) || 0).toLocaleString("en-GB", { minimumFr
 
 /* ------------------------- product illustrations -------------------------- */
 const svgURI = (inner) => "data:image/svg+xml," + encodeURIComponent(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#1a2332'/><stop offset='1' stop-color='#0d1420'/></linearGradient></defs><rect width='400' height='300' fill='url(#g)'/>${inner}</svg>`);
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#F2F6FB'/><stop offset='1' stop-color='#E6EDF6'/></linearGradient></defs><rect width='400' height='300' fill='url(#g)'/>${inner}</svg>`);
 const SHAPES = {
-  fridge: `<g stroke='#6f93cf' stroke-width='3' fill='#141d2e' stroke-linejoin='round'><rect x='150' y='50' width='100' height='200' rx='10'/><line x1='150' y1='128' x2='250' y2='128'/><rect x='234' y='70' width='6' height='34' rx='3' fill='#6f93cf' stroke='none'/><rect x='234' y='150' width='6' height='46' rx='3' fill='#6f93cf' stroke='none'/></g>`,
-  tv: `<g stroke='#6f93cf' stroke-width='3' fill='#0c1424'><rect x='108' y='72' width='184' height='112' rx='8'/><rect x='150' y='184' width='100' height='10' rx='3' fill='#6f93cf' stroke='none'/><rect x='184' y='194' width='32' height='16' fill='#6f93cf' stroke='none'/></g>`,
-  laptop: `<g stroke='#6f93cf' stroke-width='3' fill='#0c1424' stroke-linejoin='round'><rect x='138' y='88' width='124' height='82' rx='6'/><path d='M118 185 L282 185 L298 207 L102 207 Z' fill='#101a2c'/></g>`,
-  phone: `<g stroke='#6f93cf' stroke-width='3' fill='#0c1424'><rect x='164' y='58' width='72' height='184' rx='15'/><rect x='184' y='66' width='32' height='6' rx='3' fill='#6f93cf' stroke='none'/><circle cx='200' cy='230' r='6' fill='none'/></g>`,
-  washer: `<g stroke='#6f93cf' stroke-width='3' fill='#141d2e'><rect x='150' y='62' width='100' height='176' rx='10'/><circle cx='200' cy='162' r='40'/><circle cx='200' cy='162' r='23' fill='#0c1424'/><circle cx='226' cy='86' r='5' fill='#6f93cf' stroke='none'/></g>`,
-  microwave: `<g stroke='#6f93cf' stroke-width='3' fill='#141d2e'><rect x='118' y='98' width='164' height='104' rx='8'/><rect x='133' y='113' width='96' height='74' rx='5' fill='#0c1424'/><rect x='244' y='113' width='24' height='74' rx='4' fill='#0c1424'/></g>`,
-  speaker: `<g stroke='#6f93cf' stroke-width='3' fill='#141d2e'><rect x='160' y='66' width='80' height='168' rx='14'/><circle cx='200' cy='114' r='18' fill='#0c1424'/><circle cx='200' cy='182' r='29' fill='#0c1424'/></g>`,
-  camera: `<g stroke='#6f93cf' stroke-width='3' fill='#141d2e' stroke-linejoin='round'><rect x='118' y='114' width='164' height='98' rx='10'/><rect x='173' y='98' width='54' height='20' rx='5'/><circle cx='200' cy='164' r='35'/><circle cx='200' cy='164' r='18' fill='#0c1424'/></g>`,
-  generic: `<g stroke='#6f93cf' stroke-width='3' fill='#141d2e'><rect x='138' y='88' width='124' height='124' rx='12'/><circle cx='200' cy='150' r='30' fill='#0c1424'/></g>`,
+  fridge: `<g stroke='#5C86C4' stroke-width='3' fill='#FFFFFF' stroke-linejoin='round'><rect x='150' y='50' width='100' height='200' rx='10'/><line x1='150' y1='128' x2='250' y2='128'/><rect x='234' y='70' width='6' height='34' rx='3' fill='#5C86C4' stroke='none'/><rect x='234' y='150' width='6' height='46' rx='3' fill='#5C86C4' stroke='none'/></g>`,
+  tv: `<g stroke='#5C86C4' stroke-width='3' fill='#DCE6F2'><rect x='108' y='72' width='184' height='112' rx='8'/><rect x='150' y='184' width='100' height='10' rx='3' fill='#5C86C4' stroke='none'/><rect x='184' y='194' width='32' height='16' fill='#5C86C4' stroke='none'/></g>`,
+  laptop: `<g stroke='#5C86C4' stroke-width='3' fill='#DCE6F2' stroke-linejoin='round'><rect x='138' y='88' width='124' height='82' rx='6'/><path d='M118 185 L282 185 L298 207 L102 207 Z' fill='#E8EEF6'/></g>`,
+  phone: `<g stroke='#5C86C4' stroke-width='3' fill='#DCE6F2'><rect x='164' y='58' width='72' height='184' rx='15'/><rect x='184' y='66' width='32' height='6' rx='3' fill='#5C86C4' stroke='none'/><circle cx='200' cy='230' r='6' fill='none'/></g>`,
+  washer: `<g stroke='#5C86C4' stroke-width='3' fill='#FFFFFF'><rect x='150' y='62' width='100' height='176' rx='10'/><circle cx='200' cy='162' r='40'/><circle cx='200' cy='162' r='23' fill='#DCE6F2'/><circle cx='226' cy='86' r='5' fill='#5C86C4' stroke='none'/></g>`,
+  microwave: `<g stroke='#5C86C4' stroke-width='3' fill='#FFFFFF'><rect x='118' y='98' width='164' height='104' rx='8'/><rect x='133' y='113' width='96' height='74' rx='5' fill='#DCE6F2'/><rect x='244' y='113' width='24' height='74' rx='4' fill='#DCE6F2'/></g>`,
+  speaker: `<g stroke='#5C86C4' stroke-width='3' fill='#FFFFFF'><rect x='160' y='66' width='80' height='168' rx='14'/><circle cx='200' cy='114' r='18' fill='#DCE6F2'/><circle cx='200' cy='182' r='29' fill='#DCE6F2'/></g>`,
+  camera: `<g stroke='#5C86C4' stroke-width='3' fill='#FFFFFF' stroke-linejoin='round'><rect x='118' y='114' width='164' height='98' rx='10'/><rect x='173' y='98' width='54' height='20' rx='5'/><circle cx='200' cy='164' r='35'/><circle cx='200' cy='164' r='18' fill='#DCE6F2'/></g>`,
+  generic: `<g stroke='#5C86C4' stroke-width='3' fill='#FFFFFF'><rect x='138' y='88' width='124' height='124' rx='12'/><circle cx='200' cy='150' r='30' fill='#DCE6F2'/></g>`,
 };
 const illustration = (kind) => svgURI(SHAPES[kind] || SHAPES.generic);
 const mainImage = (p) => (p.images && p.images[0]) || illustration(p.kind);
@@ -63,7 +64,7 @@ function useToasts() {
   const node = (
     <div style={{ position: "fixed", top: 16, right: 16, zIndex: 200, display: "flex", flexDirection: "column", gap: 8 }}>
       {items.map((t) => (
-        <div key={t.id} style={{ animation: "vm-pop .25s ease", background: T.panel, border: `1px solid ${T.border}`, borderLeft: `3px solid ${t.kind === "warn" ? T.amber : t.kind === "err" ? T.red : T.green}`, color: T.text, padding: "12px 16px", borderRadius: 10, fontSize: 14, minWidth: 240, maxWidth: 340, boxShadow: "0 10px 30px rgba(0,0,0,.5)", fontFamily: "Manrope" }}>{t.msg}</div>
+        <div key={t.id} style={{ animation: "vm-pop .25s ease", background: T.panel, border: `1px solid ${T.border}`, borderLeft: `3px solid ${t.kind === "warn" ? T.amber : t.kind === "err" ? T.red : T.green}`, color: T.text, padding: "12px 16px", borderRadius: 10, fontSize: 14, minWidth: 240, maxWidth: 340, boxShadow: "0 8px 28px rgba(20,48,90,.14)", fontFamily: "Manrope" }}>{t.msg}</div>
       ))}
     </div>
   );
@@ -185,7 +186,7 @@ function DeliveryStrip({ mobile }) {
 function TopBar({ view, setView }) {
   const mobile = useIsMobile();
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: mobile ? "12px 14px" : "14px 20px", borderBottom: `1px solid ${T.border}`, background: T.panel2, position: "sticky", top: 0, zIndex: 40, gap: 8 }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: mobile ? "12px 14px" : "14px 20px", borderBottom: `1px solid ${T.border}`, background: T.panel2, position: "sticky", top: 0, zIndex: 40, gap: 8, boxShadow: "0 1px 8px rgba(20,48,90,.05)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
         <div style={{ width: 34, height: 34, borderRadius: 8, background: T.accent, display: "grid", placeItems: "center", fontFamily: "Sora", fontWeight: 800, fontSize: 14, color: "#fff", flexShrink: 0 }}>ZA</div>
         <div style={{ minWidth: 0 }}><span style={{ fontFamily: "Sora", fontWeight: 800, fontSize: mobile ? 16 : 19, letterSpacing: -0.5 }}>{SHOP.name}</span>{!mobile && <span style={{ color: T.faint, fontSize: 12, marginLeft: 8 }}>{SHOP.tagline}</span>}</div>
@@ -336,7 +337,7 @@ function Storefront({ products, categories, reviews, reloadReviews, placeOrder, 
         {filtered.map((p) => {
           const out = p.stock === 0;
           return (
-            <div key={p.id} onClick={() => setDetail(p)} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, overflow: "hidden", display: "flex", flexDirection: "column", animation: "vm-pop .3s ease", cursor: "pointer" }}>
+            <div key={p.id} onClick={() => setDetail(p)} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, overflow: "hidden", display: "flex", flexDirection: "column", animation: "vm-pop .3s ease", cursor: "pointer", boxShadow: T.shadow }}>
               <div style={{ position: "relative", aspectRatio: "4/3", background: T.panel2, overflow: "hidden" }}>
                 <img src={mainImage(p)} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", opacity: out ? .45 : 1 }} />
                 <div style={{ position: "absolute", top: 10, left: 10 }}><ConditionBadge condition={p.condition} grade={p.grade} /></div>
@@ -975,14 +976,14 @@ function Modal({ children, onClose, width = 440 }) {
   return (
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 120, animation: "vm-fade .2s" }} />
-      <div style={{ position: "fixed", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width, maxWidth: "94vw", maxHeight: "90vh", overflowY: "auto", background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: 24, zIndex: 121, animation: "vm-pop .25s ease", boxShadow: "0 24px 60px rgba(0,0,0,.5)" }}>{children}</div>
+      <div style={{ position: "fixed", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width, maxWidth: "94vw", maxHeight: "90vh", overflowY: "auto", background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, padding: 24, zIndex: 121, animation: "vm-pop .25s ease", boxShadow: "0 24px 60px rgba(20,48,90,.20)" }}>{children}</div>
     </>
   );
 }
 
 /* --------------------------------- styles --------------------------------- */
 const h2 = { fontFamily: "Sora", fontWeight: 700, fontSize: 22, marginBottom: 18 };
-const card = { background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, padding: 18 };
+const card = { background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, padding: 18, boxShadow: T.shadow };
 const td = { padding: "12px 14px", verticalAlign: "middle" };
 const lbl = { fontSize: 12, color: T.muted };
 const filterHead = { fontSize: 11, fontWeight: 700, color: T.faint, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 };

@@ -22,6 +22,14 @@ export const SHOP = {
     ["Sunday", "Closed"],
   ],
 
+  // Delivery / service promises shown on the shop and product pages. Edit freely.
+  deliveryPerks: [
+    ["Free local delivery", "Across East London (E7 & nearby areas)"],
+    ["Fitting & installation", "We can install and connect your appliance"],
+    ["Repairs & warranty", "Used items tested, cleaned & warrantied"],
+    ["Old appliance removal", "We can take your old unit away"],
+  ],
+
   // No API key needed — these use the public address-based Google Maps URLs.
   mapsEmbed: "https://maps.google.com/maps?q=493%20Katherine%20Rd%2C%20London%20E7%208DR&z=16&output=embed",
   mapsLink: "https://www.google.com/maps/search/?api=1&query=493%20Katherine%20Rd%2C%20London%20E7%208DR",

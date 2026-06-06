@@ -3,9 +3,11 @@ import {
   ShoppingCart, Package, LayoutDashboard, ClipboardList, Boxes, Store,
   Plus, Pencil, Trash2, X, Search, AlertTriangle, Clock, Truck, CheckCircle2,
   Lock, ArrowLeft, Minus, DollarSign, Upload, ImageIcon, Tag, Sparkles, LogOut, Loader2,
+  MapPin, Phone, Mail, MessageCircle, Wrench, ListTree,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
 import * as db from "./lib/db";
+import { SHOP, waLink, mailLink } from "./lib/config";
 
 /* ---------------------------------- theme --------------------------------- */
 const T = {
@@ -15,8 +17,10 @@ const T = {
 };
 const LOW_STOCK = 5;
 const GRADES = ["Like New", "Excellent", "Good", "Fair"];
-const CATEGORIES = ["Fridges & Freezers", "Washing & Drying", "TVs", "Computers", "Phones", "Audio", "Cameras", "Kitchen", "Other"];
-const KIND_BY_CAT = { "Fridges & Freezers": "fridge", "Washing & Drying": "washer", TVs: "tv", Computers: "laptop", Phones: "phone", Audio: "speaker", Cameras: "camera", Kitchen: "microwave" };
+const KIND_OPTIONS = ["fridge", "washer", "tv", "laptop", "phone", "speaker", "camera", "microwave", "generic"];
+// Fallback categories if the DB hasn't loaded any yet
+const FALLBACK_CATEGORIES = ["Fridges & Freezers", "Washing & Drying", "TVs", "Computers", "Phones", "Audio", "Cameras", "Kitchen", "Other"];
+const kindForCategory = (categories, name) => (categories.find((c) => c.name === name) || {}).kind || "generic";
 
 const FONTS = `
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
@@ -68,9 +72,10 @@ function useToasts() {
 const Spin = ({ size = 16 }) => <Loader2 size={size} style={{ animation: "vm-spin 1s linear infinite" }} />;
 
 /* =============================== MAIN APP ================================== */
-export default function VoltMarket() {
+export default function ZAAppliances() {
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [view, setView] = useState("store");
   const [loading, setLoading] = useState(true);
   const [pushToast, toastNode] = useToasts();
@@ -79,8 +84,11 @@ export default function VoltMarket() {
     try { setProducts(await db.listProducts()); }
     catch (e) { pushToast("Could not load products — check Supabase setup", "err"); console.error(e); }
   }, [pushToast]);
+  const reloadCategories = useCallback(async () => {
+    try { setCategories(await db.listCategories()); } catch (e) { console.error(e); }
+  }, []);
 
-  useEffect(() => { (async () => { await reloadProducts(); setLoading(false); })(); }, [reloadProducts]);
+  useEffect(() => { (async () => { await Promise.all([reloadProducts(), reloadCategories()]); setLoading(false); })(); }, [reloadProducts, reloadCategories]);
 
   const placeOrder = useCallback(async (cart, customer) => {
     const res = await db.placeOrder(customer, cart);
@@ -98,9 +106,12 @@ export default function VoltMarket() {
           <div style={{ textAlign: "center" }}><Spin size={28} /><div style={{ marginTop: 10 }}>Connecting to your store…</div></div>
         </div>
       ) : view === "store" ? (
-        <Storefront products={products} placeOrder={placeOrder} pushToast={pushToast} />
+        <Storefront products={products} categories={categories} placeOrder={placeOrder} pushToast={pushToast} />
+      ) : view === "contact" ? (
+        <ContactPage />
       ) : (
-        <Admin products={products} reloadProducts={reloadProducts} orders={orders} setOrders={setOrders} setProducts={setProducts} pushToast={pushToast} />
+        <Admin products={products} reloadProducts={reloadProducts} categories={categories} reloadCategories={reloadCategories}
+          orders={orders} setOrders={setOrders} setProducts={setProducts} pushToast={pushToast} />
       )}
     </div>
   );
@@ -110,12 +121,12 @@ function TopBar({ view, setView }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: `1px solid ${T.border}`, background: T.panel2, position: "sticky", top: 0, zIndex: 40 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ width: 30, height: 30, borderRadius: 8, background: T.accent, display: "grid", placeItems: "center", fontSize: 18 }}>⚡</div>
-        <div><span style={{ fontFamily: "Sora", fontWeight: 800, fontSize: 19, letterSpacing: -0.5 }}>VoltMarket</span><span style={{ color: T.faint, fontSize: 12, marginLeft: 8 }}>New &amp; Used Electronics</span></div>
+        <div style={{ width: 34, height: 34, borderRadius: 8, background: T.accent, display: "grid", placeItems: "center", fontFamily: "Sora", fontWeight: 800, fontSize: 14, color: "#fff" }}>ZA</div>
+        <div><span style={{ fontFamily: "Sora", fontWeight: 800, fontSize: 19, letterSpacing: -0.5 }}>{SHOP.name}</span><span style={{ color: T.faint, fontSize: 12, marginLeft: 8 }}>{SHOP.tagline}</span></div>
       </div>
       <div style={{ display: "flex", background: T.panel, borderRadius: 10, padding: 3, border: `1px solid ${T.border}` }}>
-        {[["store", "Shop", Store], ["admin", "Admin", LayoutDashboard]].map(([k, label, Icon]) => (
-          <button key={k} onClick={() => setView(k)} style={{ display: "flex", alignItems: "center", gap: 6, border: "none", cursor: "pointer", background: view === k ? T.accent : "transparent", color: view === k ? "#fff" : T.muted, padding: "7px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600, fontFamily: "Manrope" }}><Icon size={15} />{label}</button>
+        {[["store", "Shop", Store], ["contact", "Contact", MapPin], ["admin", "Admin", LayoutDashboard]].map(([k, label, Icon]) => (
+          <button key={k} onClick={() => setView(k)} style={{ display: "flex", alignItems: "center", gap: 6, border: "none", cursor: "pointer", background: view === k ? T.accent : "transparent", color: view === k ? "#fff" : T.muted, padding: "7px 13px", borderRadius: 8, fontSize: 13, fontWeight: 600, fontFamily: "Manrope" }}><Icon size={15} />{label}</button>
         ))}
       </div>
     </div>
@@ -134,7 +145,7 @@ function StockBadge({ stock }) {
 }
 
 /* =============================== STOREFRONT =============================== */
-function Storefront({ products, placeOrder, pushToast }) {
+function Storefront({ products, categories, placeOrder, pushToast }) {
   const [cart, setCart] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -143,7 +154,8 @@ function Storefront({ products, placeOrder, pushToast }) {
   const [detail, setDetail] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
 
-  const cats = useMemo(() => ["All", ...Array.from(new Set(products.map((p) => p.category)))], [products]);
+  const catNames = categories.length ? categories.map((c) => c.name) : FALLBACK_CATEGORIES;
+  const cats = useMemo(() => ["All", ...catNames], [categories]);
   const filtered = products.filter((p) =>
     (cat === "All" || p.category === cat) && (cond === "all" || p.condition === cond) &&
     (p.name.toLowerCase().includes(q.toLowerCase()) || (p.category || "").toLowerCase().includes(q.toLowerCase())));
@@ -165,8 +177,9 @@ function Storefront({ products, placeOrder, pushToast }) {
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
       <div style={{ background: `linear-gradient(120deg, ${T.accentDim}, ${T.panel})`, border: `1px solid ${T.border}`, borderRadius: 16, padding: "26px 30px", marginBottom: 20, position: "relative", overflow: "hidden" }}>
-        <div style={{ fontFamily: "Sora", fontSize: 28, fontWeight: 800, letterSpacing: -1 }}>Fridges, TVs, laptops &amp; more.</div>
-        <div style={{ color: T.muted, marginTop: 6, maxWidth: 480 }}>New and quality-checked used electronics. Live stock, real photos, delivery across East London.</div>
+        <div style={{ fontFamily: "Sora", fontSize: 28, fontWeight: 800, letterSpacing: -1 }}>Appliances, new &amp; used — plus repairs.</div>
+        <div style={{ color: T.muted, marginTop: 6, maxWidth: 520 }}>Fridges, washers, TVs and more. Quality-checked, fairly priced, delivered across East London. Need a repair? Message us on WhatsApp.</div>
+        <a href={waLink(`Hi ${SHOP.name}, I'd like to ask about a repair.`)} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 16, background: "#25D366", color: "#06210f", fontWeight: 700, padding: "9px 16px", borderRadius: 9, textDecoration: "none", fontSize: 14 }}><MessageCircle size={16} /> Repair enquiry on WhatsApp</a>
         <div style={{ position: "absolute", right: -10, top: -16, fontSize: 120, opacity: .12 }}>🧊</div>
       </div>
 
@@ -213,6 +226,22 @@ function Storefront({ products, placeOrder, pushToast }) {
         {filtered.length === 0 && <div style={{ color: T.faint, padding: 40 }}>No products yet. Add some in the Admin area.</div>}
       </div>
 
+      <div style={{ marginTop: 40, borderTop: `1px solid ${T.border}`, paddingTop: 24, display: "flex", flexWrap: "wrap", gap: 20, justifyContent: "space-between", color: T.muted, fontSize: 14 }}>
+        <div>
+          <div style={{ fontFamily: "Sora", fontWeight: 700, color: T.text, fontSize: 16 }}>{SHOP.legalName}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}><MapPin size={14} /> {SHOP.address}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}><Phone size={14} /> {SHOP.phoneDisplay}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}><Mail size={14} /> {SHOP.email}</div>
+        </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+          <a href={waLink(`Hi ${SHOP.name},`)} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#25D366", color: "#06210f", fontWeight: 700, padding: "8px 14px", borderRadius: 9, textDecoration: "none", fontSize: 13 }}><MessageCircle size={15} /> WhatsApp</a>
+          <a href={SHOP.mapsLink} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px solid ${T.border}`, color: T.text, fontWeight: 600, padding: "8px 14px", borderRadius: 9, textDecoration: "none", fontSize: 13 }}><MapPin size={15} /> Directions</a>
+        </div>
+      </div>
+
+      <a href={waLink(`Hi ${SHOP.name}, I have a question.`)} target="_blank" rel="noreferrer" title="Chat on WhatsApp" style={{ position: "fixed", left: 24, bottom: 24, zIndex: 50, background: "#25D366", color: "#06210f", borderRadius: 14, padding: "14px 16px", textDecoration: "none", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 10px 30px rgba(37,211,102,.4)", fontWeight: 700, fontFamily: "Manrope" }}>
+        <MessageCircle size={18} /> WhatsApp
+      </a>
       <button onClick={() => setCartOpen(true)} style={{ position: "fixed", right: 24, bottom: 24, zIndex: 50, background: T.accent, border: "none", color: "#fff", borderRadius: 14, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 10px 30px rgba(77,141,255,.4)", fontWeight: 700, fontFamily: "Manrope" }}>
         <ShoppingCart size={18} /> Cart{cartCount > 0 && <span style={{ background: "#fff", color: T.accent, borderRadius: 20, padding: "1px 8px", fontSize: 12, fontFamily: "JetBrains Mono", fontWeight: 700 }}>{cartCount}</span>}
       </button>
@@ -258,6 +287,10 @@ function ProductDetail({ p, onClose, onAdd }) {
           <div style={{ color: T.faint, fontSize: 13, marginTop: 4 }}>{p.category} · SKU {p.sku}</div>
           <div style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 30, margin: "14px 0" }}>{money(p.price)}</div>
           <div style={{ color: T.muted, fontSize: 14, lineHeight: 1.6 }}>{p.desc}</div>
+          <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+            <a href={waLink(`Hi ${SHOP.name}, I'm interested in: ${p.name} (${money(p.price)}). Is it available?`)} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#25D366", color: "#06210f", fontWeight: 700, padding: "8px 13px", borderRadius: 8, textDecoration: "none", fontSize: 13 }}><MessageCircle size={15} /> Ask on WhatsApp</a>
+            <a href={mailLink(`Enquiry: ${p.name}`, `Hi ${SHOP.name},\n\nI'm interested in "${p.name}" (${money(p.price)}). Is it still available?\n\nThanks,`)} style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px solid ${T.border}`, color: T.text, fontWeight: 600, padding: "8px 13px", borderRadius: 8, textDecoration: "none", fontSize: 13 }}><Mail size={15} /> Email</a>
+          </div>
           {!out && (
             <div style={{ marginTop: "auto", paddingTop: 18 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
@@ -325,7 +358,7 @@ function CartDrawer({ cart, cartTotal, setQty, onClose, onCheckout }) {
 }
 
 /* ================================= ADMIN ================================== */
-function Admin({ products, reloadProducts, orders, setOrders, setProducts, pushToast }) {
+function Admin({ products, reloadProducts, categories, reloadCategories, orders, setOrders, setProducts, pushToast }) {
   const [session, setSession] = useState(undefined); // undefined = checking
   const [tab, setTab] = useState("dashboard");
   const [email, setEmail] = useState("");
@@ -360,7 +393,7 @@ function Admin({ products, reloadProducts, orders, setOrders, setProducts, pushT
     finally { setBusy(false); }
   }
 
-  const nav = [["dashboard", "Dashboard", LayoutDashboard], ["products", "Products", Package], ["orders", "Orders", ClipboardList], ["inventory", "Inventory", Boxes]];
+  const nav = [["dashboard", "Dashboard", LayoutDashboard], ["products", "Products", Package], ["categories", "Categories", ListTree], ["orders", "Orders", ClipboardList], ["inventory", "Inventory", Boxes]];
   return (
     <div style={{ display: "flex", minHeight: "calc(100vh - 60px)" }}>
       <div style={{ width: 200, borderRight: `1px solid ${T.border}`, background: T.panel2, padding: 14, display: "flex", flexDirection: "column", gap: 4 }}>
@@ -371,7 +404,8 @@ function Admin({ products, reloadProducts, orders, setOrders, setProducts, pushT
       </div>
       <div style={{ flex: 1, padding: 24, overflowY: "auto" }}>
         {tab === "dashboard" && <Dashboard products={products} orders={orders} setTab={setTab} />}
-        {tab === "products" && <ProductsAdmin products={products} reloadProducts={reloadProducts} pushToast={pushToast} />}
+        {tab === "products" && <ProductsAdmin products={products} reloadProducts={reloadProducts} categories={categories} pushToast={pushToast} />}
+        {tab === "categories" && <CategoriesAdmin categories={categories} reloadCategories={reloadCategories} products={products} pushToast={pushToast} />}
         {tab === "orders" && <OrdersAdmin orders={orders} setOrders={setOrders} pushToast={pushToast} />}
         {tab === "inventory" && <Inventory products={products} setProducts={setProducts} pushToast={pushToast} />}
       </div>
@@ -432,12 +466,13 @@ function Dashboard({ products, orders, setTab }) {
   );
 }
 
-function ProductsAdmin({ products, reloadProducts, pushToast }) {
+function ProductsAdmin({ products, reloadProducts, categories, pushToast }) {
   const [editing, setEditing] = useState(null);
-  const blank = { name: "", category: CATEGORIES[0], kind: "fridge", sku: "", price: "", cost: "", stock: "", condition: "new", grade: "Good", images: [], desc: "" };
+  const catNames = categories.length ? categories.map((c) => c.name) : FALLBACK_CATEGORIES;
+  const blank = { name: "", category: catNames[0], kind: kindForCategory(categories, catNames[0]), sku: "", price: "", cost: "", stock: "", condition: "new", grade: "Good", images: [], desc: "" };
   const save = async (p) => {
     if (!p.name || !p.price) { pushToast("Name and price required", "warn"); return; }
-    const payload = { ...p, kind: KIND_BY_CAT[p.category] || "generic" };
+    const payload = { ...p, kind: kindForCategory(categories, p.category) };
     try {
       if (p.id) { await db.updateProduct(p.id, payload); pushToast("Product updated"); }
       else { await db.createProduct(payload); pushToast("Product added"); }
@@ -474,7 +509,7 @@ function ProductsAdmin({ products, reloadProducts, pushToast }) {
       {editing && (
         <Modal onClose={() => setEditing(null)} width={520}>
           <div style={{ fontFamily: "Sora", fontWeight: 700, fontSize: 18, marginBottom: 16 }}>{editing.id ? "Edit product" : "New product"}</div>
-          <ProductForm p={editing} onChange={setEditing} pushToast={pushToast} />
+          <ProductForm p={editing} onChange={setEditing} categories={categories} pushToast={pushToast} />
           <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
             <button onClick={() => setEditing(null)} style={{ ...ghostBtn, flex: 1 }}>Cancel</button>
             <button onClick={() => save(editing)} style={{ ...primaryBtn, flex: 1 }}>Save</button>
@@ -485,9 +520,10 @@ function ProductsAdmin({ products, reloadProducts, pushToast }) {
   );
 }
 
-function ProductForm({ p, onChange, pushToast }) {
+function ProductForm({ p, onChange, categories, pushToast }) {
   const fileRef = useRef();
   const [uploading, setUploading] = useState(false);
+  const catNames = (categories && categories.length) ? categories.map((c) => c.name) : FALLBACK_CATEGORIES;
   const f = (k, v) => onChange({ ...p, [k]: v });
   const field = (k, label, type = "text", ph = "") => (
     <div style={{ flex: 1 }}><label style={lbl}>{label}</label><input type={type} value={p[k]} placeholder={ph} onChange={(e) => f(k, e.target.value)} style={inp} /></div>
@@ -524,7 +560,7 @@ function ProductForm({ p, onChange, pushToast }) {
       </div>
       {field("name", "Name", "text", "e.g. Bosch Larder Fridge")}
       <div style={{ display: "flex", gap: 10 }}>
-        <div style={{ flex: 1 }}><label style={lbl}>Category</label><select value={p.category} onChange={(e) => f("category", e.target.value)} style={inp}>{CATEGORIES.map((c) => <option key={c} value={c} style={{ background: T.panel }}>{c}</option>)}</select></div>
+        <div style={{ flex: 1 }}><label style={lbl}>Category</label><select value={p.category} onChange={(e) => f("category", e.target.value)} style={inp}>{catNames.map((c) => <option key={c} value={c} style={{ background: T.panel }}>{c}</option>)}</select></div>
         {field("sku", "SKU (optional)")}
       </div>
       <div style={{ display: "flex", gap: 10 }}>
@@ -595,6 +631,108 @@ function Inventory({ products, setProducts, pushToast }) {
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+function CategoriesAdmin({ categories, reloadCategories, products, pushToast }) {
+  const [editing, setEditing] = useState(null);
+  const blank = { name: "", kind: "generic", sort: (categories.length ? Math.max(...categories.map((c) => c.sort || 0)) + 1 : 1) };
+  const countFor = (name) => products.filter((p) => p.category === name).length;
+  const save = async (c) => {
+    if (!c.name.trim()) { pushToast("Category name required", "warn"); return; }
+    try {
+      if (c.id) { await db.updateCategory(c.id, c); pushToast("Category updated"); }
+      else { await db.createCategory(c); pushToast("Category added"); }
+      setEditing(null); await reloadCategories();
+    } catch (e) { pushToast(e.message?.includes("duplicate") ? "That category already exists" : (e.message || "Save failed"), "err"); }
+  };
+  const del = async (c) => {
+    if (countFor(c.name) > 0) { pushToast(`Move the ${countFor(c.name)} product(s) in “${c.name}” first`, "warn"); return; }
+    try { await db.deleteCategory(c.id); pushToast("Category deleted", "err"); await reloadCategories(); } catch (e) { pushToast(e.message, "err"); }
+  };
+  return (
+    <div style={{ animation: "vm-pop .3s" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+        <h2 style={{ ...h2, margin: 0 }}>Categories</h2>
+        <button onClick={() => setEditing(blank)} style={primaryBtnSm}><Plus size={16} /> Add category</button>
+      </div>
+      <div style={{ ...card, padding: 0, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+          <thead><tr style={{ color: T.muted, textAlign: "left", fontSize: 12 }}>{["Order", "Category", "Placeholder icon", "Products", ""].map((h, i) => <th key={i} style={{ padding: "12px 14px", borderBottom: `1px solid ${T.border}`, fontWeight: 600 }}>{h}</th>)}</tr></thead>
+          <tbody>
+            {categories.map((c) => (
+              <tr key={c.id} style={{ borderBottom: `1px solid ${T.border}` }}>
+                <td style={{ ...td, fontFamily: "JetBrains Mono", color: T.faint }}>{c.sort}</td>
+                <td style={{ ...td, fontWeight: 600 }}>{c.name}</td>
+                <td style={td}><img src={illustration(c.kind)} alt="" style={{ width: 40, height: 30, borderRadius: 5, objectFit: "cover", border: `1px solid ${T.border}` }} /></td>
+                <td style={{ ...td, fontFamily: "JetBrains Mono", color: T.muted }}>{countFor(c.name)}</td>
+                <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>
+                  <button onClick={() => setEditing(c)} style={iconBtnSm}><Pencil size={15} /></button>
+                  <button onClick={() => del(c)} style={{ ...iconBtnSm, color: T.red }}><Trash2 size={15} /></button>
+                </td>
+              </tr>
+            ))}
+            {categories.length === 0 && <tr><td colSpan={5} style={{ ...td, color: T.faint }}>No categories yet — add your first one.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      {editing && (
+        <Modal onClose={() => setEditing(null)} width={420}>
+          <div style={{ fontFamily: "Sora", fontWeight: 700, fontSize: 18, marginBottom: 16 }}>{editing.id ? "Edit category" : "New category"}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div><label style={lbl}>Name</label><input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="e.g. Cookers & Ovens" style={inp} /></div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 1 }}><label style={lbl}>Placeholder icon</label><select value={editing.kind} onChange={(e) => setEditing({ ...editing, kind: e.target.value })} style={inp}>{KIND_OPTIONS.map((k) => <option key={k} value={k} style={{ background: T.panel }}>{k}</option>)}</select></div>
+              <div style={{ width: 90 }}><label style={lbl}>Sort</label><input type="number" value={editing.sort} onChange={(e) => setEditing({ ...editing, sort: e.target.value })} style={inp} /></div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: T.faint, fontSize: 13 }}>Preview <img src={illustration(editing.kind)} alt="" style={{ width: 54, height: 40, borderRadius: 6, objectFit: "cover", border: `1px solid ${T.border}` }} /></div>
+          </div>
+          <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+            <button onClick={() => setEditing(null)} style={{ ...ghostBtn, flex: 1 }}>Cancel</button>
+            <button onClick={() => save(editing)} style={{ ...primaryBtn, flex: 1 }}>Save</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function ContactPage() {
+  return (
+    <div style={{ maxWidth: 1000, margin: "0 auto", padding: 24, animation: "vm-pop .3s" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 22 }}>
+        <div>
+          <h2 style={{ fontFamily: "Sora", fontWeight: 800, fontSize: 26, marginBottom: 4 }}>{SHOP.legalName}</h2>
+          <div style={{ color: T.muted, marginBottom: 20 }}>{SHOP.tagline}</div>
+
+          <div style={{ ...card, marginBottom: 14, display: "flex", gap: 12 }}>
+            <MapPin size={20} style={{ color: T.accent, flexShrink: 0, marginTop: 2 }} />
+            <div><div style={{ fontWeight: 700 }}>Visit the shop</div><div style={{ color: T.muted, marginTop: 2 }}>{SHOP.address}</div>
+              <a href={SHOP.mapsLink} target="_blank" rel="noreferrer" style={{ color: T.accent, fontSize: 13, textDecoration: "none" }}>Open in Google Maps →</a></div>
+          </div>
+
+          <div style={{ ...card, marginBottom: 14, display: "flex", gap: 12 }}>
+            <Clock size={20} style={{ color: T.accent, flexShrink: 0, marginTop: 2 }} />
+            <div style={{ flex: 1 }}><div style={{ fontWeight: 700, marginBottom: 6 }}>Opening hours</div>
+              {SHOP.hours.map(([d, h]) => <div key={d} style={{ display: "flex", justifyContent: "space-between", color: T.muted, fontSize: 14, padding: "2px 0" }}><span>{d}</span><span style={{ fontFamily: "JetBrains Mono" }}>{h}</span></div>)}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <a href={waLink(`Hi ${SHOP.name}, I'd like to ask a question.`)} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 10, background: "#25D366", color: "#06210f", fontWeight: 700, padding: "13px 16px", borderRadius: 11, textDecoration: "none" }}><MessageCircle size={18} /> Message us on WhatsApp</a>
+            <a href={`tel:${SHOP.phoneDisplay.replace(/\s/g, "")}`} style={{ display: "flex", alignItems: "center", gap: 10, border: `1px solid ${T.border}`, color: T.text, fontWeight: 600, padding: "13px 16px", borderRadius: 11, textDecoration: "none" }}><Phone size={18} style={{ color: T.accent }} /> {SHOP.phoneDisplay}</a>
+            <a href={mailLink("Enquiry", `Hi ${SHOP.name},\n\n`)} style={{ display: "flex", alignItems: "center", gap: 10, border: `1px solid ${T.border}`, color: T.text, fontWeight: 600, padding: "13px 16px", borderRadius: 11, textDecoration: "none" }}><Mail size={18} style={{ color: T.accent }} /> {SHOP.email}</a>
+            <a href={waLink(`Hi ${SHOP.name}, I'd like to book a repair. Appliance: `)} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 10, border: `1px solid ${T.border}`, color: T.text, fontWeight: 600, padding: "13px 16px", borderRadius: 11, textDecoration: "none" }}><Wrench size={18} style={{ color: T.accent }} /> Book a repair</a>
+          </div>
+        </div>
+
+        <div>
+          <div style={{ ...card, padding: 0, overflow: "hidden", height: "100%", minHeight: 420 }}>
+            <iframe title="map" src={SHOP.mapsEmbed} style={{ border: 0, width: "100%", height: "100%", minHeight: 420 }} loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
+          </div>
+        </div>
       </div>
     </div>
   );

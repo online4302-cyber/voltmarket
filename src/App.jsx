@@ -71,6 +71,16 @@ function useToasts() {
 }
 const Spin = ({ size = 16 }) => <Loader2 size={size} style={{ animation: "vm-spin 1s linear infinite" }} />;
 
+function useIsMobile(bp = 640) {
+  const [m, setM] = useState(typeof window !== "undefined" && window.innerWidth <= bp);
+  useEffect(() => {
+    const onR = () => setM(window.innerWidth <= bp);
+    window.addEventListener("resize", onR);
+    return () => window.removeEventListener("resize", onR);
+  }, [bp]);
+  return m;
+}
+
 /* =============================== MAIN APP ================================== */
 export default function ZAAppliances() {
   const [products, setProducts] = useState([]);
@@ -118,15 +128,16 @@ export default function ZAAppliances() {
 }
 
 function TopBar({ view, setView }) {
+  const mobile = useIsMobile();
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: `1px solid ${T.border}`, background: T.panel2, position: "sticky", top: 0, zIndex: 40 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ width: 34, height: 34, borderRadius: 8, background: T.accent, display: "grid", placeItems: "center", fontFamily: "Sora", fontWeight: 800, fontSize: 14, color: "#fff" }}>ZA</div>
-        <div><span style={{ fontFamily: "Sora", fontWeight: 800, fontSize: 19, letterSpacing: -0.5 }}>{SHOP.name}</span><span style={{ color: T.faint, fontSize: 12, marginLeft: 8 }}>{SHOP.tagline}</span></div>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: mobile ? "12px 14px" : "14px 20px", borderBottom: `1px solid ${T.border}`, background: T.panel2, position: "sticky", top: 0, zIndex: 40, gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+        <div style={{ width: 34, height: 34, borderRadius: 8, background: T.accent, display: "grid", placeItems: "center", fontFamily: "Sora", fontWeight: 800, fontSize: 14, color: "#fff", flexShrink: 0 }}>ZA</div>
+        <div style={{ minWidth: 0 }}><span style={{ fontFamily: "Sora", fontWeight: 800, fontSize: mobile ? 16 : 19, letterSpacing: -0.5 }}>{SHOP.name}</span>{!mobile && <span style={{ color: T.faint, fontSize: 12, marginLeft: 8 }}>{SHOP.tagline}</span>}</div>
       </div>
-      <div style={{ display: "flex", background: T.panel, borderRadius: 10, padding: 3, border: `1px solid ${T.border}` }}>
+      <div style={{ display: "flex", background: T.panel, borderRadius: 10, padding: 3, border: `1px solid ${T.border}`, flexShrink: 0 }}>
         {[["store", "Shop", Store], ["contact", "Contact", MapPin], ["admin", "Admin", LayoutDashboard]].map(([k, label, Icon]) => (
-          <button key={k} onClick={() => setView(k)} style={{ display: "flex", alignItems: "center", gap: 6, border: "none", cursor: "pointer", background: view === k ? T.accent : "transparent", color: view === k ? "#fff" : T.muted, padding: "7px 13px", borderRadius: 8, fontSize: 13, fontWeight: 600, fontFamily: "Manrope" }}><Icon size={15} />{label}</button>
+          <button key={k} onClick={() => setView(k)} title={label} style={{ display: "flex", alignItems: "center", gap: 6, border: "none", cursor: "pointer", background: view === k ? T.accent : "transparent", color: view === k ? "#fff" : T.muted, padding: mobile ? "8px 10px" : "7px 13px", borderRadius: 8, fontSize: 13, fontWeight: 600, fontFamily: "Manrope" }}><Icon size={15} />{!mobile && label}</button>
         ))}
       </div>
     </div>
@@ -146,6 +157,7 @@ function StockBadge({ stock }) {
 
 /* =============================== STOREFRONT =============================== */
 function Storefront({ products, categories, placeOrder, pushToast }) {
+  const mobile = useIsMobile();
   const [cart, setCart] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -175,9 +187,9 @@ function Storefront({ products, categories, placeOrder, pushToast }) {
   };
 
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
-      <div style={{ background: `linear-gradient(120deg, ${T.accentDim}, ${T.panel})`, border: `1px solid ${T.border}`, borderRadius: 16, padding: "26px 30px", marginBottom: 20, position: "relative", overflow: "hidden" }}>
-        <div style={{ fontFamily: "Sora", fontSize: 28, fontWeight: 800, letterSpacing: -1 }}>Appliances, new &amp; used — plus repairs.</div>
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: mobile ? 14 : 24, paddingBottom: mobile ? 90 : 24 }}>
+      <div style={{ background: `linear-gradient(120deg, ${T.accentDim}, ${T.panel})`, border: `1px solid ${T.border}`, borderRadius: 16, padding: mobile ? "20px 18px" : "26px 30px", marginBottom: 20, position: "relative", overflow: "hidden" }}>
+        <div style={{ fontFamily: "Sora", fontSize: mobile ? 21 : 28, fontWeight: 800, letterSpacing: -1 }}>Appliances, new &amp; used — plus repairs.</div>
         <div style={{ color: T.muted, marginTop: 6, maxWidth: 520 }}>Fridges, washers, TVs and more. Quality-checked, fairly priced, delivered across East London. Need a repair? Message us on WhatsApp.</div>
         <a href={waLink(`Hi ${SHOP.name}, I'd like to ask about a repair.`)} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 16, background: "#25D366", color: "#06210f", fontWeight: 700, padding: "9px 16px", borderRadius: 9, textDecoration: "none", fontSize: 14 }}><MessageCircle size={16} /> Repair enquiry on WhatsApp</a>
         <div style={{ position: "absolute", right: -10, top: -16, fontSize: 120, opacity: .12 }}>🧊</div>
@@ -201,7 +213,7 @@ function Storefront({ products, categories, placeOrder, pushToast }) {
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(230px, 1fr))", gap: mobile ? 10 : 16 }}>
         {filtered.map((p) => {
           const out = p.stock === 0;
           return (
@@ -264,13 +276,14 @@ function Storefront({ products, categories, placeOrder, pushToast }) {
 }
 
 function ProductDetail({ p, onClose, onAdd }) {
+  const mobile = useIsMobile();
   const imgs = (p.images && p.images.length ? p.images : [illustration(p.kind)]);
   const [active, setActive] = useState(0);
   const [qty, setQty] = useState(1);
   const out = p.stock === 0;
   return (
     <Modal onClose={onClose} width={760}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 22 }}>
+      <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: mobile ? 16 : 22 }}>
         <div>
           <div style={{ aspectRatio: "4/3", background: T.panel2, borderRadius: 12, overflow: "hidden", border: `1px solid ${T.border}` }}>
             <img src={imgs[active]} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -359,6 +372,7 @@ function CartDrawer({ cart, cartTotal, setQty, onClose, onCheckout }) {
 
 /* ================================= ADMIN ================================== */
 function Admin({ products, reloadProducts, categories, reloadCategories, orders, setOrders, setProducts, pushToast }) {
+  const mobile = useIsMobile();
   const [session, setSession] = useState(undefined); // undefined = checking
   const [tab, setTab] = useState("dashboard");
   const [email, setEmail] = useState("");
@@ -395,14 +409,14 @@ function Admin({ products, reloadProducts, categories, reloadCategories, orders,
 
   const nav = [["dashboard", "Dashboard", LayoutDashboard], ["products", "Products", Package], ["categories", "Categories", ListTree], ["orders", "Orders", ClipboardList], ["inventory", "Inventory", Boxes]];
   return (
-    <div style={{ display: "flex", minHeight: "calc(100vh - 60px)" }}>
-      <div style={{ width: 200, borderRight: `1px solid ${T.border}`, background: T.panel2, padding: 14, display: "flex", flexDirection: "column", gap: 4 }}>
+    <div style={{ display: "flex", flexDirection: mobile ? "column" : "row", minHeight: "calc(100vh - 60px)" }}>
+      <div style={{ width: mobile ? "auto" : 200, borderRight: mobile ? "none" : `1px solid ${T.border}`, borderBottom: mobile ? `1px solid ${T.border}` : "none", background: T.panel2, padding: mobile ? "8px 10px" : 14, display: "flex", flexDirection: mobile ? "row" : "column", gap: mobile ? 6 : 4, overflowX: mobile ? "auto" : "visible", position: mobile ? "sticky" : "static", top: mobile ? 58 : "auto", zIndex: 30 }}>
         {nav.map(([k, label, Icon]) => (
-          <button key={k} onClick={() => setTab(k)} style={{ display: "flex", alignItems: "center", gap: 10, border: "none", cursor: "pointer", textAlign: "left", background: tab === k ? T.accentDim : "transparent", color: tab === k ? T.text : T.muted, padding: "10px 12px", borderRadius: 9, fontSize: 14, fontWeight: 600, fontFamily: "Manrope" }}><Icon size={17} />{label}</button>
+          <button key={k} onClick={() => setTab(k)} title={label} style={{ display: "flex", alignItems: "center", gap: mobile ? 6 : 10, border: "none", cursor: "pointer", textAlign: "left", background: tab === k ? T.accentDim : "transparent", color: tab === k ? T.text : T.muted, padding: mobile ? "8px 12px" : "10px 12px", borderRadius: 9, fontSize: mobile ? 13 : 14, fontWeight: 600, fontFamily: "Manrope", whiteSpace: "nowrap", flexShrink: 0 }}><Icon size={mobile ? 15 : 17} />{label}</button>
         ))}
-        <button onClick={async () => { await db.signOut(); setSession(null); }} style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: 8, border: "none", cursor: "pointer", background: "transparent", color: T.faint, padding: "10px 12px", borderRadius: 9, fontSize: 13, fontFamily: "Manrope" }}><LogOut size={15} />Sign out</button>
+        <button onClick={async () => { await db.signOut(); setSession(null); }} style={{ marginTop: mobile ? 0 : "auto", marginLeft: mobile ? "auto" : 0, display: "flex", alignItems: "center", gap: 8, border: "none", cursor: "pointer", background: "transparent", color: T.faint, padding: mobile ? "8px 12px" : "10px 12px", borderRadius: 9, fontSize: 13, fontFamily: "Manrope", whiteSpace: "nowrap", flexShrink: 0 }}><LogOut size={15} />{!mobile && "Sign out"}</button>
       </div>
-      <div style={{ flex: 1, padding: 24, overflowY: "auto" }}>
+      <div style={{ flex: 1, padding: mobile ? 14 : 24, overflowY: "auto", minWidth: 0 }}>
         {tab === "dashboard" && <Dashboard products={products} orders={orders} setTab={setTab} />}
         {tab === "products" && <ProductsAdmin products={products} reloadProducts={reloadProducts} categories={categories} pushToast={pushToast} />}
         {tab === "categories" && <CategoriesAdmin categories={categories} reloadCategories={reloadCategories} products={products} pushToast={pushToast} />}
@@ -414,6 +428,7 @@ function Admin({ products, reloadProducts, categories, reloadCategories, orders,
 }
 
 function Dashboard({ products, orders, setTab }) {
+  const mobile = useIsMobile();
   const revenue = orders.reduce((s, o) => s + o.total, 0);
   const pending = orders.filter((o) => o.status === "pending" || o.status === "processing").length;
   const lowStock = products.filter((p) => p.stock <= LOW_STOCK);
@@ -439,7 +454,7 @@ function Dashboard({ products, orders, setTab }) {
           </div>
         ))}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1.4fr 1fr", gap: 16 }}>
         <div style={card}>
           <div style={{ fontWeight: 700, fontFamily: "Sora", marginBottom: 14 }}>Stock value by category</div>
           <ResponsiveContainer width="100%" height={200}>
@@ -486,8 +501,8 @@ function ProductsAdmin({ products, reloadProducts, categories, pushToast }) {
         <h2 style={{ ...h2, margin: 0 }}>Products</h2>
         <button onClick={() => setEditing(blank)} style={primaryBtnSm}><Plus size={16} /> Add product</button>
       </div>
-      <div style={{ ...card, padding: 0, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+      <div style={{ ...card, padding: 0, overflow: "hidden", overflowX: "auto" }}>
+        <table style={{ width: "100%", minWidth: 560, borderCollapse: "collapse", fontSize: 13.5 }}>
           <thead><tr style={{ color: T.muted, textAlign: "left", fontSize: 12 }}>{["Product", "Condition", "Price", "Stock", "Margin", ""].map((h, i) => <th key={i} style={{ padding: "12px 14px", borderBottom: `1px solid ${T.border}`, fontWeight: 600 }}>{h}</th>)}</tr></thead>
           <tbody>
             {products.map((p) => (
@@ -567,7 +582,7 @@ function ProductForm({ p, onChange, categories, pushToast }) {
         <div style={{ flex: 1 }}><label style={lbl}>Condition</label><select value={p.condition} onChange={(e) => f("condition", e.target.value)} style={inp}><option value="new" style={{ background: T.panel }}>New</option><option value="used" style={{ background: T.panel }}>Used</option></select></div>
         {p.condition === "used" && <div style={{ flex: 1 }}><label style={lbl}>Grade</label><select value={p.grade} onChange={(e) => f("grade", e.target.value)} style={inp}>{GRADES.map((g) => <option key={g} value={g} style={{ background: T.panel }}>{g}</option>)}</select></div>}
       </div>
-      <div style={{ display: "flex", gap: 10 }}>{field("price", "Price (£)", "number")}{field("cost", "Cost (£)", "number")}{field("stock", "Stock", "number")}</div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>{field("price", "Price (£)", "number")}{field("cost", "Cost (£)", "number")}{field("stock", "Stock", "number")}</div>
       <div><label style={lbl}>Description</label><textarea value={p.desc} onChange={(e) => f("desc", e.target.value)} rows={3} style={{ ...inp, resize: "vertical" }} /></div>
     </div>
   );
@@ -616,8 +631,8 @@ function Inventory({ products, setProducts, pushToast }) {
   return (
     <div style={{ animation: "vm-pop .3s" }}>
       <h2 style={h2}>Inventory</h2>
-      <div style={{ ...card, padding: 0, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+      <div style={{ ...card, padding: 0, overflow: "hidden", overflowX: "auto" }}>
+        <table style={{ width: "100%", minWidth: 560, borderCollapse: "collapse", fontSize: 13.5 }}>
           <thead><tr style={{ color: T.muted, textAlign: "left", fontSize: 12 }}>{["Product", "Status", "On hand", "Restock", "SKU"].map((h, i) => <th key={i} style={{ padding: "12px 14px", borderBottom: `1px solid ${T.border}`, fontWeight: 600 }}>{h}</th>)}</tr></thead>
           <tbody>
             {sorted.map((p) => (
@@ -658,8 +673,8 @@ function CategoriesAdmin({ categories, reloadCategories, products, pushToast }) 
         <h2 style={{ ...h2, margin: 0 }}>Categories</h2>
         <button onClick={() => setEditing(blank)} style={primaryBtnSm}><Plus size={16} /> Add category</button>
       </div>
-      <div style={{ ...card, padding: 0, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+      <div style={{ ...card, padding: 0, overflow: "hidden", overflowX: "auto" }}>
+        <table style={{ width: "100%", minWidth: 560, borderCollapse: "collapse", fontSize: 13.5 }}>
           <thead><tr style={{ color: T.muted, textAlign: "left", fontSize: 12 }}>{["Order", "Category", "Placeholder icon", "Products", ""].map((h, i) => <th key={i} style={{ padding: "12px 14px", borderBottom: `1px solid ${T.border}`, fontWeight: 600 }}>{h}</th>)}</tr></thead>
           <tbody>
             {categories.map((c) => (
@@ -700,9 +715,10 @@ function CategoriesAdmin({ categories, reloadCategories, products, pushToast }) 
 }
 
 function ContactPage() {
+  const mobile = useIsMobile();
   return (
-    <div style={{ maxWidth: 1000, margin: "0 auto", padding: 24, animation: "vm-pop .3s" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 22 }}>
+    <div style={{ maxWidth: 1000, margin: "0 auto", padding: mobile ? 14 : 24, animation: "vm-pop .3s" }}>
+      <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: mobile ? 16 : 22 }}>
         <div>
           <h2 style={{ fontFamily: "Sora", fontWeight: 800, fontSize: 26, marginBottom: 4 }}>{SHOP.legalName}</h2>
           <div style={{ color: T.muted, marginBottom: 20 }}>{SHOP.tagline}</div>

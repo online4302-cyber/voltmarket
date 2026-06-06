@@ -4,11 +4,13 @@ import { supabase } from "./supabase";
 const toApp = (r) => ({
   id: r.id, name: r.name, category: r.category, kind: r.kind, sku: r.sku,
   price: Number(r.price), cost: Number(r.cost), stock: r.stock,
+  salePrice: r.sale_price != null ? Number(r.sale_price) : null,
   condition: r.condition, grade: r.grade, images: r.images || [], desc: r.description || "",
 });
 const toRow = (p) => ({
   name: p.name, category: p.category, kind: p.kind, sku: p.sku,
   price: Number(p.price) || 0, cost: Number(p.cost) || 0, stock: Number(p.stock) || 0,
+  sale_price: (p.salePrice === "" || p.salePrice == null) ? null : Number(p.salePrice),
   condition: p.condition, grade: p.condition === "used" ? p.grade : null,
   images: p.images || [], description: p.desc || "",
 });
@@ -111,6 +113,22 @@ export async function placeOrder(customer, items) {
 }
 export async function advanceOrder(dbId, next) {
   const { error } = await supabase.from("orders").update({ status: next }).eq("id", dbId);
+  if (error) throw error;
+}
+
+/* --------------------------------- reviews -------------------------------- */
+export async function listReviews() {
+  const { data, error } = await supabase.from("reviews").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+export async function addReview(r) {
+  const { data, error } = await supabase.from("reviews").insert({ product_id: r.product_id, name: r.name, rating: r.rating, comment: r.comment || null }).select().single();
+  if (error) throw error;
+  return data;
+}
+export async function deleteReview(id) {
+  const { error } = await supabase.from("reviews").delete().eq("id", id);
   if (error) throw error;
 }
 

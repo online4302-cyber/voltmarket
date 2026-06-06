@@ -13,6 +13,27 @@ const toRow = (p) => ({
   images: p.images || [], description: p.desc || "",
 });
 
+/* -------------------------------- categories ------------------------------ */
+export async function listCategories() {
+  const { data, error } = await supabase.from("categories").select("*").order("sort", { ascending: true }).order("name");
+  if (error) throw error;
+  return data;
+}
+export async function createCategory(c) {
+  const { data, error } = await supabase.from("categories").insert({ name: c.name, kind: c.kind || "generic", sort: Number(c.sort) || 0 }).select().single();
+  if (error) throw error;
+  return data;
+}
+export async function updateCategory(id, c) {
+  const { data, error } = await supabase.from("categories").update({ name: c.name, kind: c.kind, sort: Number(c.sort) || 0 }).eq("id", id).select().single();
+  if (error) throw error;
+  return data;
+}
+export async function deleteCategory(id) {
+  const { error } = await supabase.from("categories").delete().eq("id", id);
+  if (error) throw error;
+}
+
 /* -------------------------------- products -------------------------------- */
 export async function listProducts() {
   const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });

@@ -3,7 +3,7 @@ import {
   ShoppingCart, Package, LayoutDashboard, ClipboardList, Boxes, Store,
   Plus, Pencil, Trash2, X, Search, AlertTriangle, Clock, Truck, CheckCircle2,
   Lock, ArrowLeft, Minus, DollarSign, Upload, ImageIcon, Tag, Sparkles, LogOut, Loader2,
-  MapPin, Phone, Mail, MessageCircle, Wrench, ListTree, Star, SlidersHorizontal, ShieldCheck,
+  MapPin, Phone, Mail, MessageCircle, Wrench, ListTree, Star, SlidersHorizontal, ShieldCheck, Menu, ChevronDown, ChevronRight,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
 import * as db from "./lib/db";
@@ -22,6 +22,21 @@ const KIND_OPTIONS = ["fridge", "washer", "tv", "laptop", "phone", "speaker", "c
 // Fallback categories if the DB hasn't loaded any yet
 const FALLBACK_CATEGORIES = ["Fridges & Freezers", "Washing & Drying", "TVs", "Computers", "Phones", "Audio", "Cameras", "Kitchen", "Other"];
 const kindForCategory = (categories, name) => (categories.find((c) => c.name === name) || {}).kind || "generic";
+// Group categories into departments (ordered by their smallest sort value)
+function buildDepartments(categories) {
+  const map = new Map();
+  categories.forEach((c) => {
+    const d = c.department || "Other";
+    if (!map.has(d)) map.set(d, { name: d, subs: [], minSort: c.sort ?? 999 });
+    const e = map.get(d);
+    e.subs.push(c);
+    e.minSort = Math.min(e.minSort, c.sort ?? 999);
+  });
+  const arr = [...map.values()];
+  arr.forEach((d) => d.subs.sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0)));
+  arr.sort((a, b) => a.minSort - b.minSort);
+  return arr;
+}
 
 const FONTS = `
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
@@ -90,6 +105,7 @@ export default function ZAAppliances() {
   const [reviews, setReviews] = useState([]);
   const [view, setView] = useState("store");
   const [q, setQ] = useState("");
+  const [dept, setDept] = useState("All");
   const [cat, setCat] = useState("All");
   const [loading, setLoading] = useState(true);
   const [pushToast, toastNode] = useToasts();
@@ -119,19 +135,19 @@ export default function ZAAppliances() {
       {toastNode}
       {loading ? (
         <>
-          <SiteHeader view={view} setView={setView} q={q} setQ={setQ} cat={cat} setCat={setCat} categories={categories} cartCount={0} onCartClick={() => {}} />
+          <SiteHeader view={view} setView={setView} q={q} setQ={setQ} dept={dept} setDept={setDept} cat={cat} setCat={setCat} categories={categories} cartCount={0} onCartClick={() => {}} />
           <div style={{ display: "grid", placeItems: "center", minHeight: 360, color: T.muted }}>
             <div style={{ textAlign: "center" }}><Spin size={28} /><div style={{ marginTop: 10 }}>Loading the shop…</div></div>
           </div>
         </>
       ) : view === "store" ? (
         <Storefront products={products} categories={categories} reviews={reviews} reloadReviews={reloadReviews}
-          placeOrder={placeOrder} pushToast={pushToast} q={q} setQ={setQ} cat={cat} setCat={setCat} setView={setView} />
+          placeOrder={placeOrder} pushToast={pushToast} q={q} setQ={setQ} dept={dept} setDept={setDept} cat={cat} setCat={setCat} setView={setView} />
       ) : view === "contact" ? (
         <>
-          <SiteHeader view={view} setView={setView} q={q} setQ={setQ} cat={cat} setCat={setCat} categories={categories} cartCount={0} onCartClick={() => { setCat("All"); setView("store"); }} />
+          <SiteHeader view={view} setView={setView} q={q} setQ={setQ} dept={dept} setDept={setDept} cat={cat} setCat={setCat} categories={categories} cartCount={0} onCartClick={() => { setDept("All"); setCat("All"); setView("store"); }} />
           <ContactPage />
-          <SiteFooter setView={setView} setCat={setCat} categories={categories} />
+          <SiteFooter setView={setView} setDept={setDept} setCat={setCat} categories={categories} />
         </>
       ) : (
         <>
@@ -195,10 +211,37 @@ function DeliveryStrip({ mobile }) {
   );
 }
 
-function SiteHeader({ view, setView, q, setQ, cat, setCat, categories, cartCount, onCartClick }) {
+function WhyChooseUs({ mobile }) {
+  const items = [
+    [Truck, "Free local delivery", "Across East London (E7 & nearby)"],
+    [Wrench, "Repairs & installation", "We fit, connect and repair"],
+    [ShieldCheck, "Warranty included", "Used items tested & warrantied"],
+    [Tag, "New & used", "Quality-checked, fairly priced"],
+  ];
+  return (
+    <section style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, boxShadow: T.shadow, padding: mobile ? "22px 16px" : "30px 24px", margin: "30px 0" }}>
+      <h2 style={{ ...sectionH, textAlign: "center", marginBottom: 22 }}>Why choose {SHOP.name}?</h2>
+      <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: mobile ? 16 : 20 }}>
+        {items.map(([Icon, title, sub], i) => (
+          <div key={i} style={{ textAlign: "center" }}>
+            <div style={{ width: 64, height: 64, borderRadius: 34, background: T.accentDim, display: "grid", placeItems: "center", margin: "0 auto 12px" }}><Icon size={28} style={{ color: T.accent }} /></div>
+            <div style={{ fontFamily: "Sora", fontWeight: 700, fontSize: 14.5 }}>{title}</div>
+            <div style={{ color: T.muted, fontSize: 12.5, marginTop: 4, lineHeight: 1.4 }}>{sub}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SiteHeader({ view, setView, q, setQ, dept, cat, setDept, setCat, categories, cartCount, onCartClick }) {
   const mobile = useIsMobile();
-  const catNames = categories.length ? categories.map((c) => c.name) : FALLBACK_CATEGORIES;
-  const goShop = (c) => { setCat(c); setView("store"); };
+  const departments = buildDepartments(categories);
+  const [openDept, setOpenDept] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const goHome = () => { setDept("All"); setCat("All"); setView("store"); setMenuOpen(false); };
+  const goDept = (d) => { setDept(d); setCat("All"); setView("store"); setOpenDept(null); setMenuOpen(false); };
+  const goSub = (d, s) => { setDept(d); setCat(s); setView("store"); setOpenDept(null); setMenuOpen(false); };
   return (
     <header style={{ position: "sticky", top: 0, zIndex: 45, boxShadow: "0 2px 12px rgba(20,48,90,.07)" }}>
       {!mobile && (
@@ -214,31 +257,85 @@ function SiteHeader({ view, setView, q, setQ, cat, setCat, categories, cartCount
       )}
       <div style={{ background: T.panel, borderBottom: `1px solid ${T.border}` }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: mobile ? "10px 14px" : "12px 20px", display: "flex", alignItems: "center", gap: mobile ? 10 : 16 }}>
-          <button onClick={() => { setCat("All"); setView("store"); }} style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
+          {mobile && <button onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", color: T.text, padding: 0, display: "grid", placeItems: "center" }}><Menu size={24} /></button>}
+          <button onClick={goHome} style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
             <div style={{ width: 38, height: 38, borderRadius: 9, background: T.accent, display: "grid", placeItems: "center", fontFamily: "Sora", fontWeight: 800, fontSize: 15, color: "#fff" }}>ZA</div>
             {!mobile && <div style={{ textAlign: "left" }}><div style={{ fontFamily: "Sora", fontWeight: 800, fontSize: 18, color: T.text, lineHeight: 1.1 }}>{SHOP.name}</div><div style={{ color: T.faint, fontSize: 11 }}>{SHOP.tagline}</div></div>}
           </button>
           <div style={{ flex: 1, position: "relative", maxWidth: 560 }}>
             <Search size={17} style={{ position: "absolute", left: 13, top: 12, color: T.faint }} />
-            <input value={q} onChange={(e) => { setQ(e.target.value); setView("store"); }} placeholder={mobile ? "Search…" : "Search fridges, TVs, laptops…"}
+            <input value={q} onChange={(e) => { setQ(e.target.value); setView("store"); setDept("All"); setCat("All"); }} placeholder={mobile ? "Search…" : "Search fridges, washers, hobs…"}
               style={{ width: "100%", background: T.bg, border: `1px solid ${T.border}`, borderRadius: 10, padding: "11px 12px 11px 38px", color: T.text, fontSize: 14, fontFamily: "Manrope", outline: "none" }} />
           </div>
-          <button onClick={() => setView("contact")} title="Contact" style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: view === "contact" ? T.accent : T.muted, fontWeight: 600, fontSize: 13.5, fontFamily: "Manrope", flexShrink: 0 }}><MapPin size={18} />{!mobile && "Contact"}</button>
+          {!mobile && <button onClick={() => setView("contact")} title="Contact" style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: view === "contact" ? T.accent : T.muted, fontWeight: 600, fontSize: 13.5, fontFamily: "Manrope", flexShrink: 0 }}><MapPin size={18} />Contact</button>}
           <button onClick={onCartClick} style={{ position: "relative", display: "flex", alignItems: "center", gap: 7, background: T.accent, border: "none", cursor: "pointer", color: "#fff", fontWeight: 700, fontSize: 13.5, fontFamily: "Manrope", padding: mobile ? "9px 11px" : "10px 16px", borderRadius: 10, flexShrink: 0 }}>
             <ShoppingCart size={17} />{!mobile && "Cart"}
             {cartCount > 0 && <span style={{ background: "#fff", color: T.accent, borderRadius: 20, padding: "0 7px", fontSize: 11.5, fontFamily: "JetBrains Mono", fontWeight: 700 }}>{cartCount}</span>}
           </button>
         </div>
       </div>
-      <div style={{ background: T.panel, borderBottom: `1px solid ${T.border}` }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 12px", display: "flex", gap: 2, overflowX: "auto" }}>
-          {["All", ...catNames].map((c) => {
-            const on = view === "store" && cat === c;
-            return <button key={c} onClick={() => goShop(c)} style={{ border: "none", background: "none", cursor: "pointer", padding: "11px 12px", fontSize: 13.5, fontWeight: on ? 700 : 500, color: on ? T.accent : T.muted, borderBottom: `2px solid ${on ? T.accent : "transparent"}`, whiteSpace: "nowrap", fontFamily: "Manrope" }}>{c}</button>;
-          })}
+      {/* desktop department mega-menu */}
+      {!mobile && (
+        <div style={{ background: T.panel, borderBottom: `1px solid ${T.border}` }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 12px", display: "flex", gap: 2, position: "relative" }}>
+            <button onClick={goHome} style={{ border: "none", background: "none", cursor: "pointer", padding: "12px 12px", fontSize: 13.5, fontWeight: dept === "All" && view === "store" ? 700 : 500, color: dept === "All" && view === "store" ? T.accent : T.muted, fontFamily: "Manrope" }}>Home</button>
+            {departments.map((d) => {
+              const on = view === "store" && dept === d.name;
+              return (
+                <div key={d.name} onMouseEnter={() => setOpenDept(d.name)} onMouseLeave={() => setOpenDept(null)} style={{ position: "relative" }}>
+                  <button onClick={() => goDept(d.name)} style={{ border: "none", background: "none", cursor: "pointer", padding: "12px 12px", fontSize: 13.5, fontWeight: on ? 700 : 500, color: on ? T.accent : T.text, borderBottom: `2px solid ${on ? T.accent : "transparent"}`, fontFamily: "Manrope", display: "flex", alignItems: "center", gap: 4 }}>{d.name} <ChevronDown size={14} style={{ color: T.faint }} /></button>
+                  {openDept === d.name && d.subs.length > 0 && (
+                    <div style={{ position: "absolute", top: "100%", left: 0, minWidth: 220, background: T.panel, border: `1px solid ${T.border}`, borderRadius: "0 0 12px 12px", boxShadow: "0 12px 28px rgba(20,48,90,.16)", padding: 8, zIndex: 50 }}>
+                      <button onClick={() => goDept(d.name)} style={{ width: "100%", textAlign: "left", border: "none", background: "none", cursor: "pointer", padding: "8px 10px", fontSize: 13, fontWeight: 700, color: T.accent, fontFamily: "Manrope" }}>All {d.name}</button>
+                      {d.subs.map((s) => (
+                        <button key={s.id || s.name} onClick={() => goSub(d.name, s.name)} style={{ width: "100%", textAlign: "left", border: "none", background: "none", cursor: "pointer", padding: "8px 10px", fontSize: 13.5, color: T.muted, fontFamily: "Manrope", borderRadius: 6 }} onMouseEnter={(e) => (e.currentTarget.style.background = T.panel2)} onMouseLeave={(e) => (e.currentTarget.style.background = "none")}>{s.name}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
+      {/* mobile slide-in menu */}
+      {mobile && menuOpen && (
+        <>
+          <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 60, animation: "vm-fade .2s" }} />
+          <div style={{ position: "fixed", left: 0, top: 0, bottom: 0, width: 280, maxWidth: "85vw", background: T.panel, zIndex: 61, overflowY: "auto", animation: "vm-slide .25s ease", boxShadow: "4px 0 24px rgba(0,0,0,.2)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderBottom: `1px solid ${T.border}` }}>
+              <span style={{ fontFamily: "Sora", fontWeight: 800 }}>Menu</span>
+              <button onClick={() => setMenuOpen(false)} style={iconBtn}><X size={20} /></button>
+            </div>
+            <button onClick={goHome} style={{ width: "100%", textAlign: "left", border: "none", background: "none", cursor: "pointer", padding: "13px 16px", fontSize: 15, fontWeight: 700, color: T.text, borderBottom: `1px solid ${T.border}`, fontFamily: "Manrope" }}>Home</button>
+            {departments.map((d) => (
+              <div key={d.name} style={{ borderBottom: `1px solid ${T.border}` }}>
+                <button onClick={() => setOpenDept(openDept === d.name ? null : d.name)} style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", border: "none", background: "none", cursor: "pointer", padding: "13px 16px", fontSize: 15, fontWeight: 700, color: T.text, fontFamily: "Manrope" }}>{d.name}<ChevronDown size={16} style={{ transform: openDept === d.name ? "rotate(180deg)" : "none", transition: ".2s" }} /></button>
+                {openDept === d.name && (
+                  <div style={{ background: T.panel2, paddingBottom: 6 }}>
+                    <button onClick={() => goDept(d.name)} style={{ width: "100%", textAlign: "left", border: "none", background: "none", cursor: "pointer", padding: "9px 26px", fontSize: 13.5, fontWeight: 700, color: T.accent, fontFamily: "Manrope" }}>All {d.name}</button>
+                    {d.subs.map((s) => <button key={s.id || s.name} onClick={() => goSub(d.name, s.name)} style={{ width: "100%", textAlign: "left", border: "none", background: "none", cursor: "pointer", padding: "9px 26px", fontSize: 13.5, color: T.muted, fontFamily: "Manrope" }}>{s.name}</button>)}
+                  </div>
+                )}
+              </div>
+            ))}
+            <button onClick={() => { setView("contact"); setMenuOpen(false); }} style={{ width: "100%", textAlign: "left", border: "none", background: "none", cursor: "pointer", padding: "13px 16px", fontSize: 15, fontWeight: 700, color: T.text, fontFamily: "Manrope" }}>Contact</button>
+          </div>
+        </>
+      )}
     </header>
+  );
+}
+
+function CategoryTile({ title, sub, kind, onClick }) {
+  return (
+    <button onClick={onClick} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, overflow: "hidden", cursor: "pointer", boxShadow: T.shadow, padding: 0, textAlign: "left", display: "flex", flexDirection: "column" }}>
+      <div style={{ aspectRatio: "16/10", background: T.panel2, overflow: "hidden" }}><img src={illustration(kind)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>
+      <div style={{ padding: "12px 14px" }}>
+        <div style={{ fontWeight: 700, fontFamily: "Sora", fontSize: 15, color: T.text }}>{title}</div>
+        {sub && <div style={{ color: T.muted, fontSize: 12.5, marginTop: 2 }}>{sub}</div>}
+      </div>
+    </button>
   );
 }
 
@@ -289,11 +386,12 @@ function ProductCard({ p, reviews, onOpen, onAdd, mobile, width }) {
   );
 }
 
-function SiteFooter({ setView, setCat, categories }) {
+function SiteFooter({ setView, setDept, setCat, categories }) {
   const mobile = useIsMobile();
-  const catNames = (categories.length ? categories.map((c) => c.name) : FALLBACK_CATEGORIES).slice(0, 6);
+  const departments = buildDepartments(categories);
   const colH = { color: "#fff", fontFamily: "Sora", fontWeight: 700, fontSize: 14, marginBottom: 12 };
   const fLink = { background: "none", border: "none", color: "#aeb9c8", cursor: "pointer", padding: "4px 0", fontSize: 13.5, fontFamily: "Manrope", textAlign: "left", textDecoration: "none", display: "block" };
+  const goDept = (d) => { setDept(d); setCat("All"); setView("store"); };
   return (
     <footer style={{ background: T.text, color: "#aeb9c8", marginTop: 44 }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: mobile ? "30px 16px" : "44px 24px", display: "grid", gridTemplateColumns: mobile ? "1fr 1fr" : "2fr 1fr 1.1fr 1.2fr", gap: mobile ? 24 : 32 }}>
@@ -312,8 +410,8 @@ function SiteFooter({ setView, setCat, categories }) {
         </div>
         <div>
           <div style={colH}>Shop</div>
-          <button style={fLink} onClick={() => { setCat("All"); setView("store"); }}>All products</button>
-          {catNames.map((c) => <button key={c} style={fLink} onClick={() => { setCat(c); setView("store"); }}>{c}</button>)}
+          <button style={fLink} onClick={() => { setDept("All"); setCat("All"); setView("store"); }}>All products</button>
+          {departments.map((d) => <button key={d.name} style={fLink} onClick={() => goDept(d.name)}>{d.name}</button>)}
         </div>
         <div>
           <div style={colH}>Customer service</div>
@@ -361,7 +459,7 @@ function StockBadge({ stock }) {
 }
 
 /* =============================== STOREFRONT =============================== */
-function Storefront({ products, categories, reviews, reloadReviews, placeOrder, pushToast, q, setQ, cat, setCat, setView }) {
+function Storefront({ products, categories, reviews, reloadReviews, placeOrder, pushToast, q, setQ, dept, setDept, cat, setCat, setView }) {
   const mobile = useIsMobile();
   const shopRef = useRef(null);
   const [cart, setCart] = useState([]);
@@ -377,9 +475,14 @@ function Storefront({ products, categories, reviews, reloadReviews, placeOrder, 
   const [confirmation, setConfirmation] = useState(null);
 
   const catNames = categories.length ? categories.map((c) => c.name) : FALLBACK_CATEGORIES;
+  const departments = buildDepartments(categories);
+  const curDept = departments.find((d) => d.name === dept);
+  const deptSubs = curDept ? curDept.subs.map((s) => s.name) : [];
+  const inScope = (p) => cat !== "All" ? p.category === cat : (dept !== "All" ? deptSubs.includes(p.category) : true);
+  const searching = q.trim().length > 0;
   const filtered = useMemo(() => {
     let list = products.filter((p) =>
-      (cat === "All" || p.category === cat) && (cond === "all" || p.condition === cond) &&
+      inScope(p) && (cond === "all" || p.condition === cond) &&
       (!inStock || p.stock > 0) && (!saleOnly || onSale(p)) &&
       (minP === "" || effPrice(p) >= Number(minP)) && (maxP === "" || effPrice(p) <= Number(maxP)) &&
       (p.name.toLowerCase().includes(q.toLowerCase()) || (p.category || "").toLowerCase().includes(q.toLowerCase())));
@@ -388,7 +491,8 @@ function Storefront({ products, categories, reviews, reloadReviews, placeOrder, 
     else if (sort === "price-desc") list = [...list].sort((a, b) => effPrice(b) - effPrice(a));
     else if (sort === "rating") list = [...list].sort((a, b) => rate(b) - rate(a));
     return list;
-  }, [products, reviews, cat, cond, inStock, saleOnly, minP, maxP, q, sort]);
+  }, [products, reviews, dept, cat, cond, inStock, saleOnly, minP, maxP, q, sort]);
+  const countInCat = (name) => products.filter((p) => p.category === name).length;
   const activeFilters = (cat !== "All" ? 1 : 0) + (cond !== "all" ? 1 : 0) + (inStock ? 1 : 0) + (saleOnly ? 1 : 0) + (minP !== "" || maxP !== "" ? 1 : 0);
   const clearFilters = () => { setCat("All"); setCond("all"); setInStock(false); setSaleOnly(false); setMinP(""); setMaxP(""); };
   const cartCount = cart.reduce((s, c) => s + c.qty, 0);
@@ -412,14 +516,6 @@ function Storefront({ products, categories, reviews, reloadReviews, placeOrder, 
 
   const FilterControls = () => (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      <div>
-        <div style={filterHead}>Category</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {["All", ...catNames].map((c) => (
-            <button key={c} onClick={() => setCat(c)} style={{ textAlign: "left", border: "none", background: cat === c ? T.accentDim : "transparent", color: cat === c ? T.text : T.muted, padding: "8px 10px", borderRadius: 8, fontSize: 13.5, cursor: "pointer", fontWeight: cat === c ? 700 : 500, fontFamily: "Manrope" }}>{c}</button>
-          ))}
-        </div>
-      </div>
       <div>
         <div style={filterHead}>Condition</div>
         <div style={{ display: "flex", background: T.panel2, borderRadius: 9, padding: 3, border: `1px solid ${T.border}` }}>
@@ -449,57 +545,120 @@ function Storefront({ products, categories, reviews, reloadReviews, placeOrder, 
   );
 
   const deals = products.filter(onSale).slice(0, 12);
+  const mode = searching ? "search" : cat !== "All" ? "sub" : dept !== "All" ? "dept" : "home";
+  const goDept = (d) => { setDept(d); setCat("All"); setQ(""); shopRef.current?.scrollIntoView({ behavior: "smooth" }); };
+  const goSub = (s) => { const c = categories.find((x) => x.name === s); if (c) setDept(c.department || dept); setCat(s); setQ(""); shopRef.current?.scrollIntoView({ behavior: "smooth" }); };
+
+  const Listing = () => (
+    <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "230px 1fr", gap: 20, alignItems: "start" }}>
+      {!mobile && <div style={{ ...card, padding: 16, position: "sticky", top: 152 }}><FilterControls /></div>}
+      <div>
+        <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ color: T.muted, fontSize: 13.5, marginRight: "auto" }}>{filtered.length} product{filtered.length !== 1 ? "s" : ""}</div>
+          {mobile && (
+            <button onClick={() => setFiltersOpen(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: T.panel, border: `1px solid ${T.border}`, color: T.text, padding: "9px 14px", borderRadius: 10, fontSize: 13.5, fontWeight: 600, fontFamily: "Manrope", cursor: "pointer" }}>
+              <SlidersHorizontal size={15} /> Filters{activeFilters > 0 && <span style={{ background: T.accent, color: "#fff", borderRadius: 20, padding: "0 7px", fontSize: 11, fontFamily: "JetBrains Mono" }}>{activeFilters}</span>}
+            </button>
+          )}
+          <select value={sort} onChange={(e) => setSort(e.target.value)} style={{ background: T.panel, border: `1px solid ${T.border}`, color: T.text, padding: "9px 12px", borderRadius: 10, fontSize: 13.5, fontFamily: "Manrope", outline: "none", cursor: "pointer" }}>
+            <option value="featured">Sort: Featured</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="rating">Top rated</option>
+          </select>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(220px, 1fr))", gap: mobile ? 10 : 16 }}>
+          {filtered.map((p) => <ProductCard key={p.id} p={p} reviews={reviews} onOpen={setDetail} onAdd={addToCart} mobile={mobile} />)}
+          {filtered.length === 0 && <div style={{ color: T.faint, padding: 40, gridColumn: "1 / -1" }}>No products found.</div>}
+        </div>
+      </div>
+    </div>
+  );
+
+  const Breadcrumb = () => (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", color: T.muted, fontSize: 13, marginBottom: 14 }}>
+      <button onClick={() => { setDept("All"); setCat("All"); setQ(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: T.muted, fontFamily: "Manrope", fontSize: 13, padding: 0 }}>Home</button>
+      {dept !== "All" && <><ChevronRight size={13} /><button onClick={() => goDept(dept)} style={{ background: "none", border: "none", cursor: "pointer", color: cat === "All" ? T.text : T.muted, fontWeight: cat === "All" ? 700 : 400, fontFamily: "Manrope", fontSize: 13, padding: 0 }}>{dept}</button></>}
+      {cat !== "All" && <><ChevronRight size={13} /><span style={{ color: T.text, fontWeight: 700 }}>{cat}</span></>}
+      {searching && <><ChevronRight size={13} /><span style={{ color: T.text, fontWeight: 700 }}>Search: “{q}”</span></>}
+    </div>
+  );
 
   return (
     <>
-      <SiteHeader view="store" setView={setView} q={q} setQ={setQ} cat={cat} setCat={setCat} categories={categories} cartCount={cartCount} onCartClick={() => setCartOpen(true)} />
-      <Hero mobile={mobile} onShop={() => shopRef.current?.scrollIntoView({ behavior: "smooth" })} />
+      <SiteHeader view="store" setView={setView} q={q} setQ={setQ} dept={dept} setDept={setDept} cat={cat} setCat={setCat} categories={categories} cartCount={cartCount} onCartClick={() => setCartOpen(true)} />
+      {mode === "home" && <Hero mobile={mobile} onShop={() => shopRef.current?.scrollIntoView({ behavior: "smooth" })} />}
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: mobile ? "18px 14px 30px" : "26px 24px 30px" }}>
-        <DeliveryStrip mobile={mobile} />
+        {mode === "home" && (
+          <>
+            <DeliveryStrip mobile={mobile} />
+            {deals.length > 0 && (
+              <section style={{ marginBottom: 30 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                  <h2 style={sectionH}>🔥 Today's deals</h2>
+                  <button onClick={() => { setSaleOnly(true); shopRef.current?.scrollIntoView({ behavior: "smooth" }); }} style={{ background: "none", border: "none", color: T.accent, fontWeight: 700, cursor: "pointer", fontSize: 13.5, fontFamily: "Manrope" }}>See all deals →</button>
+                </div>
+                <div style={{ display: "flex", gap: 14, overflowX: "auto", paddingBottom: 8 }}>
+                  {deals.map((p) => <ProductCard key={p.id} p={p} reviews={reviews} onOpen={setDetail} onAdd={addToCart} mobile={mobile} width={mobile ? 168 : 212} />)}
+                </div>
+              </section>
+            )}
+            {departments.length > 0 && (
+              <section style={{ marginBottom: 30 }}>
+                <h2 style={{ ...sectionH, marginBottom: 14 }}>Browse by department</h2>
+                <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(200px, 1fr))", gap: mobile ? 10 : 16 }}>
+                  {departments.map((d) => <CategoryTile key={d.name} title={d.name} sub={`${d.subs.length} categor${d.subs.length === 1 ? "y" : "ies"}`} kind={d.subs[0]?.kind || "generic"} onClick={() => goDept(d.name)} />)}
+                </div>
+              </section>
+            )}
+            <section style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 30 }}>
+              <div style={{ background: "linear-gradient(120deg,#0A8DE6,#2563EB)", color: "#fff", borderRadius: 16, padding: mobile ? "22px" : "30px", position: "relative", overflow: "hidden" }}>
+                <div style={{ fontFamily: "Sora", fontWeight: 800, fontSize: 21 }}>Fridges &amp; freezers</div>
+                <div style={{ opacity: .92, marginTop: 6, fontSize: 14, maxWidth: 280, lineHeight: 1.5 }}>New &amp; used cooling — fully tested and ready to go.</div>
+                <button onClick={() => goDept("Refrigeration")} style={{ marginTop: 16, background: "#fff", color: T.accent, border: "none", borderRadius: 9, padding: "10px 18px", fontWeight: 700, cursor: "pointer", fontFamily: "Manrope" }}>Shop refrigeration →</button>
+                <div style={{ position: "absolute", right: -6, bottom: -18, fontSize: 96, opacity: .18 }}>🧊</div>
+              </div>
+              <div style={{ background: T.text, color: "#fff", borderRadius: 16, padding: mobile ? "22px" : "30px", position: "relative", overflow: "hidden" }}>
+                <div style={{ fontFamily: "Sora", fontWeight: 800, fontSize: 21 }}>Appliance not working?</div>
+                <div style={{ opacity: .85, marginTop: 6, fontSize: 14, maxWidth: 300, lineHeight: 1.5 }}>We repair and install across East London. Message us for a quote.</div>
+                <a href={waLink(`Hi ${SHOP.name}, I'd like to book a repair. Appliance: `)} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 16, background: "#25D366", color: "#06210f", borderRadius: 9, padding: "10px 18px", fontWeight: 700, textDecoration: "none", fontFamily: "Manrope" }}><Wrench size={16} /> Book a repair</a>
+                <div style={{ position: "absolute", right: -6, bottom: -16, fontSize: 88, opacity: .12 }}>🔧</div>
+              </div>
+            </section>
+            <section ref={shopRef} style={{ scrollMarginTop: 150 }}>
+              <h2 style={{ ...sectionH, marginBottom: 14 }}>All products</h2>
+              <Listing />
+            </section>
+            <WhyChooseUs mobile={mobile} />
+          </>
+        )}
 
-        {deals.length > 0 && (
-          <section style={{ marginBottom: 30 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <h2 style={sectionH}>🔥 Today's deals</h2>
-              <button onClick={() => { setSaleOnly(true); setCat("All"); shopRef.current?.scrollIntoView({ behavior: "smooth" }); }} style={{ background: "none", border: "none", color: T.accent, fontWeight: 700, cursor: "pointer", fontSize: 13.5, fontFamily: "Manrope" }}>See all deals →</button>
-            </div>
-            <div style={{ display: "flex", gap: 14, overflowX: "auto", paddingBottom: 8, scrollSnapType: "x proximity" }}>
-              {deals.map((p) => <ProductCard key={p.id} p={p} reviews={reviews} onOpen={setDetail} onAdd={addToCart} mobile={mobile} width={mobile ? 168 : 212} />)}
-            </div>
+        {mode === "dept" && (
+          <section ref={shopRef} style={{ scrollMarginTop: 150 }}>
+            <Breadcrumb />
+            <h1 style={{ fontFamily: "Sora", fontWeight: 800, fontSize: mobile ? 24 : 30, margin: "0 0 4px", letterSpacing: -0.5 }}>{dept}</h1>
+            <div style={{ color: T.muted, marginBottom: 18 }}>Browse all {dept.toLowerCase()} — new &amp; used.</div>
+            {curDept && curDept.subs.length > 0 && (
+              <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(190px, 1fr))", gap: mobile ? 10 : 16, marginBottom: 28 }}>
+                {curDept.subs.map((s) => <CategoryTile key={s.id || s.name} title={s.name} sub={`${countInCat(s.name)} item${countInCat(s.name) === 1 ? "" : "s"}`} kind={s.kind} onClick={() => goSub(s.name)} />)}
+              </div>
+            )}
+            <h2 style={{ ...sectionH, marginBottom: 14 }}>All {dept}</h2>
+            <Listing />
           </section>
         )}
 
-        <section ref={shopRef} style={{ scrollMarginTop: 150 }}>
-          <h2 style={sectionH}>{cat === "All" ? "Shop all products" : cat}</h2>
-          <div style={{ display: "flex", gap: 10, margin: "12px 0 16px", flexWrap: "wrap", alignItems: "center" }}>
-            <div style={{ color: T.muted, fontSize: 13.5, marginRight: "auto" }}>{filtered.length} product{filtered.length !== 1 ? "s" : ""}{cat !== "All" ? ` in ${cat}` : ""}</div>
-            {mobile && (
-              <button onClick={() => setFiltersOpen(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: T.panel, border: `1px solid ${T.border}`, color: T.text, padding: "9px 14px", borderRadius: 10, fontSize: 13.5, fontWeight: 600, fontFamily: "Manrope", cursor: "pointer" }}>
-                <SlidersHorizontal size={15} /> Filters{activeFilters > 0 && <span style={{ background: T.accent, color: "#fff", borderRadius: 20, padding: "0 7px", fontSize: 11, fontFamily: "JetBrains Mono" }}>{activeFilters}</span>}
-              </button>
-            )}
-            <select value={sort} onChange={(e) => setSort(e.target.value)} style={{ background: T.panel, border: `1px solid ${T.border}`, color: T.text, padding: "9px 12px", borderRadius: 10, fontSize: 13.5, fontFamily: "Manrope", outline: "none", cursor: "pointer" }}>
-              <option value="featured">Sort: Featured</option>
-              <option value="price-asc">Price: Low to High</option>
-              <option value="price-desc">Price: High to Low</option>
-              <option value="rating">Top rated</option>
-            </select>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "230px 1fr", gap: 20, alignItems: "start" }}>
-            {!mobile && <div style={{ ...card, padding: 16, position: "sticky", top: 152 }}><FilterControls /></div>}
-            <div>
-              <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(220px, 1fr))", gap: mobile ? 10 : 16 }}>
-                {filtered.map((p) => <ProductCard key={p.id} p={p} reviews={reviews} onOpen={setDetail} onAdd={addToCart} mobile={mobile} />)}
-                {filtered.length === 0 && <div style={{ color: T.faint, padding: 40, gridColumn: "1 / -1" }}>No products match your filters.</div>}
-              </div>
-            </div>
-          </div>
-        </section>
+        {(mode === "sub" || mode === "search") && (
+          <section ref={shopRef} style={{ scrollMarginTop: 150 }}>
+            <Breadcrumb />
+            <h1 style={{ fontFamily: "Sora", fontWeight: 800, fontSize: mobile ? 24 : 30, margin: "0 0 14px", letterSpacing: -0.5 }}>{searching ? `Search results` : cat}</h1>
+            <Listing />
+          </section>
+        )}
       </div>
 
-      <SiteFooter setView={setView} setCat={setCat} categories={categories} />
+      <SiteFooter setView={setView} setDept={setDept} setCat={setCat} categories={categories} />
 
       {mobile && filtersOpen && (
         <>
@@ -903,7 +1062,7 @@ function ProductForm({ p, onChange, categories, pushToast }) {
       </div>
       {field("name", "Name", "text", "e.g. Bosch Larder Fridge")}
       <div style={{ display: "flex", gap: 10 }}>
-        <div style={{ flex: 1 }}><label style={lbl}>Category</label><select value={p.category} onChange={(e) => f("category", e.target.value)} style={inp}>{catNames.map((c) => <option key={c} value={c} style={{ background: T.panel }}>{c}</option>)}</select></div>
+        <div style={{ flex: 1 }}><label style={lbl}>Category</label><select value={p.category} onChange={(e) => f("category", e.target.value)} style={inp}>{buildDepartments(categories).map((d) => <optgroup key={d.name} label={d.name}>{d.subs.map((s) => <option key={s.name} value={s.name} style={{ background: T.panel }}>{s.name}</option>)}</optgroup>)}{(!categories || categories.length === 0) && catNames.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
         {field("sku", "SKU (optional)")}
       </div>
       <div style={{ display: "flex", gap: 10 }}>
@@ -989,10 +1148,12 @@ function Inventory({ products, setProducts, pushToast }) {
 
 function CategoriesAdmin({ categories, reloadCategories, products, pushToast }) {
   const [editing, setEditing] = useState(null);
-  const blank = { name: "", kind: "generic", sort: (categories.length ? Math.max(...categories.map((c) => c.sort || 0)) + 1 : 1) };
+  const departments = [...new Set(categories.map((c) => c.department || "Other"))];
+  const blank = { name: "", department: departments[0] || "Refrigeration", kind: "generic", sort: (categories.length ? Math.max(...categories.map((c) => c.sort || 0)) + 1 : 1) };
   const countFor = (name) => products.filter((p) => p.category === name).length;
   const save = async (c) => {
     if (!c.name.trim()) { pushToast("Category name required", "warn"); return; }
+    if (!c.department?.trim()) { pushToast("Department required", "warn"); return; }
     try {
       if (c.id) { await db.updateCategory(c.id, c); pushToast("Category updated"); }
       else { await db.createCategory(c); pushToast("Category added"); }
@@ -1003,19 +1164,21 @@ function CategoriesAdmin({ categories, reloadCategories, products, pushToast }) 
     if (countFor(c.name) > 0) { pushToast(`Move the ${countFor(c.name)} product(s) in “${c.name}” first`, "warn"); return; }
     try { await db.deleteCategory(c.id); pushToast("Category deleted", "err"); await reloadCategories(); } catch (e) { pushToast(e.message, "err"); }
   };
+  const ordered = buildDepartments(categories);
   return (
     <div style={{ animation: "vm-pop .3s" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-        <h2 style={{ ...h2, margin: 0 }}>Categories</h2>
+        <h2 style={{ ...h2, margin: 0 }}>Departments &amp; categories</h2>
         <button onClick={() => setEditing(blank)} style={primaryBtnSm}><Plus size={16} /> Add category</button>
       </div>
       <div style={{ ...card, padding: 0, overflow: "hidden", overflowX: "auto" }}>
         <table style={{ width: "100%", minWidth: 560, borderCollapse: "collapse", fontSize: 13.5 }}>
-          <thead><tr style={{ color: T.muted, textAlign: "left", fontSize: 12 }}>{["Order", "Category", "Placeholder icon", "Products", ""].map((h, i) => <th key={i} style={{ padding: "12px 14px", borderBottom: `1px solid ${T.border}`, fontWeight: 600 }}>{h}</th>)}</tr></thead>
+          <thead><tr style={{ color: T.muted, textAlign: "left", fontSize: 12 }}>{["Order", "Department", "Category", "Icon", "Products", ""].map((h, i) => <th key={i} style={{ padding: "12px 14px", borderBottom: `1px solid ${T.border}`, fontWeight: 600 }}>{h}</th>)}</tr></thead>
           <tbody>
-            {categories.map((c) => (
+            {ordered.flatMap((d) => d.subs).map((c) => (
               <tr key={c.id} style={{ borderBottom: `1px solid ${T.border}` }}>
                 <td style={{ ...td, fontFamily: "JetBrains Mono", color: T.faint }}>{c.sort}</td>
+                <td style={{ ...td, color: T.muted }}>{c.department || "Other"}</td>
                 <td style={{ ...td, fontWeight: 600 }}>{c.name}</td>
                 <td style={td}><img src={illustration(c.kind)} alt="" style={{ width: 40, height: 30, borderRadius: 5, objectFit: "cover", border: `1px solid ${T.border}` }} /></td>
                 <td style={{ ...td, fontFamily: "JetBrains Mono", color: T.muted }}>{countFor(c.name)}</td>
@@ -1025,15 +1188,20 @@ function CategoriesAdmin({ categories, reloadCategories, products, pushToast }) 
                 </td>
               </tr>
             ))}
-            {categories.length === 0 && <tr><td colSpan={5} style={{ ...td, color: T.faint }}>No categories yet — add your first one.</td></tr>}
+            {categories.length === 0 && <tr><td colSpan={6} style={{ ...td, color: T.faint }}>No categories yet — add your first one.</td></tr>}
           </tbody>
         </table>
       </div>
       {editing && (
-        <Modal onClose={() => setEditing(null)} width={420}>
+        <Modal onClose={() => setEditing(null)} width={440}>
           <div style={{ fontFamily: "Sora", fontWeight: 700, fontSize: 18, marginBottom: 16 }}>{editing.id ? "Edit category" : "New category"}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div><label style={lbl}>Name</label><input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="e.g. Cookers & Ovens" style={inp} /></div>
+            <div><label style={lbl}>Department</label>
+              <input list="dept-list" value={editing.department || ""} onChange={(e) => setEditing({ ...editing, department: e.target.value })} placeholder="e.g. Refrigeration" style={inp} />
+              <datalist id="dept-list">{departments.map((d) => <option key={d} value={d} />)}</datalist>
+              <div style={{ color: T.faint, fontSize: 11.5, marginTop: 4 }}>Pick an existing department or type a new one.</div>
+            </div>
+            <div><label style={lbl}>Category name</label><input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="e.g. Fridge Freezer" style={inp} /></div>
             <div style={{ display: "flex", gap: 10 }}>
               <div style={{ flex: 1 }}><label style={lbl}>Placeholder icon</label><select value={editing.kind} onChange={(e) => setEditing({ ...editing, kind: e.target.value })} style={inp}>{KIND_OPTIONS.map((k) => <option key={k} value={k} style={{ background: T.panel }}>{k}</option>)}</select></div>
               <div style={{ width: 90 }}><label style={lbl}>Sort</label><input type="number" value={editing.sort} onChange={(e) => setEditing({ ...editing, sort: e.target.value })} style={inp} /></div>

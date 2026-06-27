@@ -11,10 +11,11 @@ import { SHOP, waLink, mailLink } from "./lib/config";
 
 /* ---------------------------------- theme --------------------------------- */
 const T = {
-  bg: "#F5F8FC", panel: "#FFFFFF", panel2: "#EEF3F9", border: "#E2E8F1",
-  text: "#0F1C2E", muted: "#5A6678", faint: "#9AA6B6",
-  accent: "#0A8DE6", accentDim: "#E1F0FB", green: "#1FA971", red: "#E0483D", amber: "#E8A300",
-  shadow: "0 1px 2px rgba(20,48,90,.06), 0 6px 20px rgba(20,48,90,.07)",
+  bg: "#F4F7F7", panel: "#FFFFFF", panel2: "#EBF1F1", border: "#DEE7E6",
+  text: "#0F2622", muted: "#5A6B67", faint: "#93A29E",
+  accent: "#0E9488", accentDim: "#DBF0ED", green: "#16A34A", red: "#E0483D", amber: "#E8A300",
+  ink: "#0B2E2A", // dark teal for header utility bar + footer
+  shadow: "0 1px 2px rgba(15,38,34,.05), 0 8px 24px rgba(15,38,34,.07)",
 };
 const LOW_STOCK = 5;
 const GRADES = ["Like New", "Excellent", "Good", "Fair"];
@@ -53,17 +54,21 @@ const money = (n) => "£" + (Number(n) || 0).toLocaleString("en-GB", { minimumFr
 
 /* ------------------------- product illustrations -------------------------- */
 const svgURI = (inner) => "data:image/svg+xml," + encodeURIComponent(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#F2F6FB'/><stop offset='1' stop-color='#E6EDF6'/></linearGradient></defs><rect width='400' height='300' fill='url(#g)'/>${inner}</svg>`);
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'><defs>` +
+  `<linearGradient id='bg' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#FFFFFF'/><stop offset='1' stop-color='#E9EEEE'/></linearGradient>` +
+  `<linearGradient id='mtl' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='#FCFEFE'/><stop offset='.5' stop-color='#E7EDED'/><stop offset='1' stop-color='#D2DAD9'/></linearGradient>` +
+  `<linearGradient id='glass' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#E4EBEA'/><stop offset='1' stop-color='#C4CECC'/></linearGradient>` +
+  `</defs><rect width='400' height='300' fill='url(#bg)'/><ellipse cx='200' cy='264' rx='118' ry='13' fill='#0B2E2A' opacity='.06'/>${inner}</svg>`);
 const SHAPES = {
-  fridge: `<g stroke='#5C86C4' stroke-width='3' fill='#FFFFFF' stroke-linejoin='round'><rect x='150' y='50' width='100' height='200' rx='10'/><line x1='150' y1='128' x2='250' y2='128'/><rect x='234' y='70' width='6' height='34' rx='3' fill='#5C86C4' stroke='none'/><rect x='234' y='150' width='6' height='46' rx='3' fill='#5C86C4' stroke='none'/></g>`,
-  tv: `<g stroke='#5C86C4' stroke-width='3' fill='#DCE6F2'><rect x='108' y='72' width='184' height='112' rx='8'/><rect x='150' y='184' width='100' height='10' rx='3' fill='#5C86C4' stroke='none'/><rect x='184' y='194' width='32' height='16' fill='#5C86C4' stroke='none'/></g>`,
-  laptop: `<g stroke='#5C86C4' stroke-width='3' fill='#DCE6F2' stroke-linejoin='round'><rect x='138' y='88' width='124' height='82' rx='6'/><path d='M118 185 L282 185 L298 207 L102 207 Z' fill='#E8EEF6'/></g>`,
-  phone: `<g stroke='#5C86C4' stroke-width='3' fill='#DCE6F2'><rect x='164' y='58' width='72' height='184' rx='15'/><rect x='184' y='66' width='32' height='6' rx='3' fill='#5C86C4' stroke='none'/><circle cx='200' cy='230' r='6' fill='none'/></g>`,
-  washer: `<g stroke='#5C86C4' stroke-width='3' fill='#FFFFFF'><rect x='150' y='62' width='100' height='176' rx='10'/><circle cx='200' cy='162' r='40'/><circle cx='200' cy='162' r='23' fill='#DCE6F2'/><circle cx='226' cy='86' r='5' fill='#5C86C4' stroke='none'/></g>`,
-  microwave: `<g stroke='#5C86C4' stroke-width='3' fill='#FFFFFF'><rect x='118' y='98' width='164' height='104' rx='8'/><rect x='133' y='113' width='96' height='74' rx='5' fill='#DCE6F2'/><rect x='244' y='113' width='24' height='74' rx='4' fill='#DCE6F2'/></g>`,
-  speaker: `<g stroke='#5C86C4' stroke-width='3' fill='#FFFFFF'><rect x='160' y='66' width='80' height='168' rx='14'/><circle cx='200' cy='114' r='18' fill='#DCE6F2'/><circle cx='200' cy='182' r='29' fill='#DCE6F2'/></g>`,
-  camera: `<g stroke='#5C86C4' stroke-width='3' fill='#FFFFFF' stroke-linejoin='round'><rect x='118' y='114' width='164' height='98' rx='10'/><rect x='173' y='98' width='54' height='20' rx='5'/><circle cx='200' cy='164' r='35'/><circle cx='200' cy='164' r='18' fill='#DCE6F2'/></g>`,
-  generic: `<g stroke='#5C86C4' stroke-width='3' fill='#FFFFFF'><rect x='138' y='88' width='124' height='124' rx='12'/><circle cx='200' cy='150' r='30' fill='#DCE6F2'/></g>`,
+  fridge: `<g stroke='#BFC9C7' stroke-width='2' stroke-linejoin='round'><rect x='150' y='44' width='100' height='210' rx='12' fill='url(#mtl)'/><line x1='150' y1='126' x2='250' y2='126'/><rect x='236' y='66' width='5' height='36' rx='2.5' fill='#A7B2AF' stroke='none'/><rect x='236' y='150' width='5' height='48' rx='2.5' fill='#A7B2AF' stroke='none'/></g>`,
+  washer: `<g stroke='#BFC9C7' stroke-width='2'><rect x='148' y='54' width='104' height='196' rx='12' fill='url(#mtl)'/><rect x='162' y='68' width='78' height='12' rx='4' fill='#D3DBDA' stroke='none'/><circle cx='225' cy='74' r='3' fill='#A7B2AF' stroke='none'/><circle cx='200' cy='160' r='44' fill='#D7DEDD'/><circle cx='200' cy='160' r='30' fill='url(#glass)'/></g>`,
+  microwave: `<g stroke='#BFC9C7' stroke-width='2'><rect x='110' y='92' width='180' height='112' rx='10' fill='url(#mtl)'/><rect x='124' y='106' width='118' height='84' rx='6' fill='url(#glass)'/><rect x='252' y='106' width='26' height='84' rx='5' fill='#DCE3E2' stroke='none'/><circle cx='265' cy='118' r='4' fill='#A7B2AF' stroke='none'/></g>`,
+  generic: `<g stroke='#BFC9C7' stroke-width='2'><rect x='138' y='78' width='124' height='136' rx='14' fill='url(#mtl)'/><rect x='158' y='98' width='84' height='74' rx='8' fill='url(#glass)' stroke='none'/></g>`,
+  tv: `<g stroke='#BFC9C7' stroke-width='2'><rect x='104' y='64' width='192' height='120' rx='8' fill='#2A3330'/><rect x='110' y='70' width='180' height='108' rx='4' fill='url(#glass)'/><rect x='178' y='186' width='44' height='10' fill='#C4CECC' stroke='none'/><rect x='150' y='196' width='100' height='8' rx='3' fill='#BFC9C7' stroke='none'/></g>`,
+  laptop: `<g stroke='#BFC9C7' stroke-width='2' stroke-linejoin='round'><rect x='138' y='86' width='124' height='84' rx='6' fill='url(#glass)'/><path d='M118 184 L282 184 L298 206 L102 206 Z' fill='url(#mtl)'/></g>`,
+  phone: `<g stroke='#BFC9C7' stroke-width='2'><rect x='164' y='56' width='72' height='186' rx='15' fill='url(#glass)'/><rect x='184' y='64' width='32' height='5' rx='2.5' fill='#A7B2AF' stroke='none'/></g>`,
+  speaker: `<g stroke='#BFC9C7' stroke-width='2'><rect x='158' y='62' width='84' height='176' rx='14' fill='url(#mtl)'/><circle cx='200' cy='112' r='18' fill='#CFD7D6'/><circle cx='200' cy='184' r='30' fill='#CFD7D6'/></g>`,
+  camera: `<g stroke='#BFC9C7' stroke-width='2' stroke-linejoin='round'><rect x='116' y='112' width='168' height='100' rx='10' fill='url(#mtl)'/><rect x='172' y='96' width='56' height='20' rx='5' fill='url(#mtl)'/><circle cx='200' cy='164' r='36' fill='#CFD7D6'/><circle cx='200' cy='164' r='20' fill='url(#glass)'/></g>`,
 };
 const illustration = (kind) => svgURI(SHAPES[kind] || SHAPES.generic);
 const mainImage = (p) => (p.images && p.images[0]) || illustration(p.kind);
@@ -245,7 +250,7 @@ function SiteHeader({ view, setView, q, setQ, dept, cat, setDept, setCat, catego
   return (
     <header style={{ position: "sticky", top: 0, zIndex: 45, boxShadow: "0 2px 12px rgba(20,48,90,.07)" }}>
       {!mobile && (
-        <div style={{ background: T.text, color: "#c7d2e0", fontSize: 12.5 }}>
+        <div style={{ background: T.ink, color: "#c7d2e0", fontSize: 12.5 }}>
           <div style={{ maxWidth: 1200, margin: "0 auto", padding: "7px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}><MapPin size={13} /> {SHOP.address}</span>
             <span style={{ display: "flex", gap: 18, alignItems: "center" }}>
@@ -278,12 +283,12 @@ function SiteHeader({ view, setView, q, setQ, dept, cat, setDept, setCat, catego
       {!mobile && (
         <div style={{ background: T.panel, borderBottom: `1px solid ${T.border}` }}>
           <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 12px", display: "flex", gap: 2, position: "relative" }}>
-            <button onClick={goHome} style={{ border: "none", background: "none", cursor: "pointer", padding: "12px 12px", fontSize: 13.5, fontWeight: dept === "All" && view === "store" ? 700 : 500, color: dept === "All" && view === "store" ? T.accent : T.muted, fontFamily: "Manrope" }}>Home</button>
+            <button onClick={goHome} style={{ border: "none", background: "none", cursor: "pointer", padding: "14px 14px", fontSize: 12.5, letterSpacing: 0.4, textTransform: "uppercase", fontWeight: 700, color: dept === "All" && view === "store" ? T.accent : T.text, fontFamily: "Manrope" }}>Home</button>
             {departments.map((d) => {
               const on = view === "store" && dept === d.name;
               return (
                 <div key={d.name} onMouseEnter={() => setOpenDept(d.name)} onMouseLeave={() => setOpenDept(null)} style={{ position: "relative" }}>
-                  <button onClick={() => goDept(d.name)} style={{ border: "none", background: "none", cursor: "pointer", padding: "12px 12px", fontSize: 13.5, fontWeight: on ? 700 : 500, color: on ? T.accent : T.text, borderBottom: `2px solid ${on ? T.accent : "transparent"}`, fontFamily: "Manrope", display: "flex", alignItems: "center", gap: 4 }}>{d.name} <ChevronDown size={14} style={{ color: T.faint }} /></button>
+                  <button onClick={() => goDept(d.name)} style={{ border: "none", background: "none", cursor: "pointer", padding: "14px 14px", fontSize: 12.5, letterSpacing: 0.4, textTransform: "uppercase", fontWeight: 700, color: on ? T.accent : T.text, borderBottom: `3px solid ${on ? T.accent : "transparent"}`, fontFamily: "Manrope", display: "flex", alignItems: "center", gap: 4 }}>{d.name} <ChevronDown size={14} style={{ color: T.faint }} /></button>
                   {openDept === d.name && d.subs.length > 0 && (
                     <div style={{ position: "absolute", top: "100%", left: 0, minWidth: 220, background: T.panel, border: `1px solid ${T.border}`, borderRadius: "0 0 12px 12px", boxShadow: "0 12px 28px rgba(20,48,90,.16)", padding: 8, zIndex: 50 }}>
                       <button onClick={() => goDept(d.name)} style={{ width: "100%", textAlign: "left", border: "none", background: "none", cursor: "pointer", padding: "8px 10px", fontSize: 13, fontWeight: 700, color: T.accent, fontFamily: "Manrope" }}>All {d.name}</button>
@@ -327,12 +332,12 @@ function SiteHeader({ view, setView, q, setQ, dept, cat, setDept, setCat, catego
   );
 }
 
-function CategoryTile({ title, sub, kind, onClick }) {
+function CategoryTile({ title, sub, kind, image, onClick }) {
   return (
-    <button onClick={onClick} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 14, overflow: "hidden", cursor: "pointer", boxShadow: T.shadow, padding: 0, textAlign: "left", display: "flex", flexDirection: "column" }}>
-      <div style={{ aspectRatio: "16/10", background: T.panel2, overflow: "hidden" }}><img src={illustration(kind)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>
-      <div style={{ padding: "12px 14px" }}>
-        <div style={{ fontWeight: 700, fontFamily: "Sora", fontSize: 15, color: T.text }}>{title}</div>
+    <button onClick={onClick} style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 16, overflow: "hidden", cursor: "pointer", boxShadow: T.shadow, padding: 0, textAlign: "left", display: "flex", flexDirection: "column" }}>
+      <div style={{ aspectRatio: "1/1", background: T.panel2, overflow: "hidden" }}><img src={image || illustration(kind)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>
+      <div style={{ padding: "13px 15px" }}>
+        <div style={{ fontWeight: 700, fontFamily: "Sora", fontSize: 15.5, color: T.text }}>{title}</div>
         {sub && <div style={{ color: T.muted, fontSize: 12.5, marginTop: 2 }}>{sub}</div>}
       </div>
     </button>
@@ -341,7 +346,7 @@ function CategoryTile({ title, sub, kind, onClick }) {
 
 function Hero({ mobile, onShop }) {
   return (
-    <div style={{ background: "linear-gradient(110deg, #0A8DE6 0%, #2563EB 100%)", color: "#fff" }}>
+    <div style={{ background: "linear-gradient(110deg, #0E9488 0%, #0B6E66 100%)", color: "#fff" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: mobile ? "30px 16px" : "48px 24px", display: "grid", gridTemplateColumns: mobile ? "1fr" : "1.35fr 1fr", gap: 16, alignItems: "center" }}>
         <div>
           <div style={{ display: "inline-block", background: "rgba(255,255,255,.18)", padding: "5px 12px", borderRadius: 20, fontSize: 12.5, fontWeight: 600, marginBottom: 14 }}>Sales · Repairs · Installation</div>
@@ -393,7 +398,7 @@ function SiteFooter({ setView, setDept, setCat, categories }) {
   const fLink = { background: "none", border: "none", color: "#aeb9c8", cursor: "pointer", padding: "4px 0", fontSize: 13.5, fontFamily: "Manrope", textAlign: "left", textDecoration: "none", display: "block" };
   const goDept = (d) => { setDept(d); setCat("All"); setView("store"); };
   return (
-    <footer style={{ background: T.text, color: "#aeb9c8", marginTop: 44 }}>
+    <footer style={{ background: T.ink, color: "#aeb9c8", marginTop: 44 }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: mobile ? "30px 16px" : "44px 24px", display: "grid", gridTemplateColumns: mobile ? "1fr 1fr" : "2fr 1fr 1.1fr 1.2fr", gap: mobile ? 24 : 32 }}>
         <div style={{ gridColumn: mobile ? "1 / -1" : "auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
@@ -493,6 +498,8 @@ function Storefront({ products, categories, reviews, reloadReviews, placeOrder, 
     return list;
   }, [products, reviews, dept, cat, cond, inStock, saleOnly, minP, maxP, q, sort]);
   const countInCat = (name) => products.filter((p) => p.category === name).length;
+  const subImage = (name) => (products.find((p) => p.category === name && p.images && p.images.length) || {}).images?.[0];
+  const deptImage = (d) => { const sub = d.subs.map((s) => s.name); return (products.find((p) => sub.includes(p.category) && p.images && p.images.length) || {}).images?.[0]; };
   const activeFilters = (cat !== "All" ? 1 : 0) + (cond !== "all" ? 1 : 0) + (inStock ? 1 : 0) + (saleOnly ? 1 : 0) + (minP !== "" || maxP !== "" ? 1 : 0);
   const clearFilters = () => { setCat("All"); setCond("all"); setInStock(false); setSaleOnly(false); setMinP(""); setMaxP(""); };
   const cartCount = cart.reduce((s, c) => s + c.qty, 0);
@@ -608,18 +615,18 @@ function Storefront({ products, categories, reviews, reloadReviews, placeOrder, 
               <section style={{ marginBottom: 30 }}>
                 <h2 style={{ ...sectionH, marginBottom: 14 }}>Browse by department</h2>
                 <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(200px, 1fr))", gap: mobile ? 10 : 16 }}>
-                  {departments.map((d) => <CategoryTile key={d.name} title={d.name} sub={`${d.subs.length} categor${d.subs.length === 1 ? "y" : "ies"}`} kind={d.subs[0]?.kind || "generic"} onClick={() => goDept(d.name)} />)}
+                  {departments.map((d) => <CategoryTile key={d.name} title={d.name} sub={`${d.subs.length} categor${d.subs.length === 1 ? "y" : "ies"}`} kind={d.subs[0]?.kind || "generic"} image={deptImage(d)} onClick={() => goDept(d.name)} />)}
                 </div>
               </section>
             )}
             <section style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 30 }}>
-              <div style={{ background: "linear-gradient(120deg,#0A8DE6,#2563EB)", color: "#fff", borderRadius: 16, padding: mobile ? "22px" : "30px", position: "relative", overflow: "hidden" }}>
+              <div style={{ background: "linear-gradient(120deg,#0E9488,#0B6E66)", color: "#fff", borderRadius: 16, padding: mobile ? "22px" : "30px", position: "relative", overflow: "hidden" }}>
                 <div style={{ fontFamily: "Sora", fontWeight: 800, fontSize: 21 }}>Fridges &amp; freezers</div>
                 <div style={{ opacity: .92, marginTop: 6, fontSize: 14, maxWidth: 280, lineHeight: 1.5 }}>New &amp; used cooling — fully tested and ready to go.</div>
                 <button onClick={() => goDept("Refrigeration")} style={{ marginTop: 16, background: "#fff", color: T.accent, border: "none", borderRadius: 9, padding: "10px 18px", fontWeight: 700, cursor: "pointer", fontFamily: "Manrope" }}>Shop refrigeration →</button>
                 <div style={{ position: "absolute", right: -6, bottom: -18, fontSize: 96, opacity: .18 }}>🧊</div>
               </div>
-              <div style={{ background: T.text, color: "#fff", borderRadius: 16, padding: mobile ? "22px" : "30px", position: "relative", overflow: "hidden" }}>
+              <div style={{ background: T.ink, color: "#fff", borderRadius: 16, padding: mobile ? "22px" : "30px", position: "relative", overflow: "hidden" }}>
                 <div style={{ fontFamily: "Sora", fontWeight: 800, fontSize: 21 }}>Appliance not working?</div>
                 <div style={{ opacity: .85, marginTop: 6, fontSize: 14, maxWidth: 300, lineHeight: 1.5 }}>We repair and install across East London. Message us for a quote.</div>
                 <a href={waLink(`Hi ${SHOP.name}, I'd like to book a repair. Appliance: `)} target="_blank" rel="noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 16, background: "#25D366", color: "#06210f", borderRadius: 9, padding: "10px 18px", fontWeight: 700, textDecoration: "none", fontFamily: "Manrope" }}><Wrench size={16} /> Book a repair</a>
@@ -641,7 +648,7 @@ function Storefront({ products, categories, reviews, reloadReviews, placeOrder, 
             <div style={{ color: T.muted, marginBottom: 18 }}>Browse all {dept.toLowerCase()} — new &amp; used.</div>
             {curDept && curDept.subs.length > 0 && (
               <div style={{ display: "grid", gridTemplateColumns: mobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(190px, 1fr))", gap: mobile ? 10 : 16, marginBottom: 28 }}>
-                {curDept.subs.map((s) => <CategoryTile key={s.id || s.name} title={s.name} sub={`${countInCat(s.name)} item${countInCat(s.name) === 1 ? "" : "s"}`} kind={s.kind} onClick={() => goSub(s.name)} />)}
+                {curDept.subs.map((s) => <CategoryTile key={s.id || s.name} title={s.name} sub={`${countInCat(s.name)} item${countInCat(s.name) === 1 ? "" : "s"}`} kind={s.kind} image={subImage(s.name)} onClick={() => goSub(s.name)} />)}
               </div>
             )}
             <h2 style={{ ...sectionH, marginBottom: 14 }}>All {dept}</h2>

@@ -22,12 +22,12 @@ export async function listCategories() {
   return data;
 }
 export async function createCategory(c) {
-  const { data, error } = await supabase.from("categories").insert({ name: c.name, kind: c.kind || "generic", sort: Number(c.sort) || 0 }).select().single();
+  const { data, error } = await supabase.from("categories").insert({ name: c.name, department: c.department || "Other", kind: c.kind || "generic", sort: Number(c.sort) || 0 }).select().single();
   if (error) throw error;
   return data;
 }
 export async function updateCategory(id, c) {
-  const { data, error } = await supabase.from("categories").update({ name: c.name, kind: c.kind, sort: Number(c.sort) || 0 }).eq("id", id).select().single();
+  const { data, error } = await supabase.from("categories").update({ name: c.name, department: c.department || "Other", kind: c.kind, sort: Number(c.sort) || 0 }).eq("id", id).select().single();
   if (error) throw error;
   return data;
 }
